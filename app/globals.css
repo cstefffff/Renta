@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   RentA Design System — Variabile CSS Globale & Stilizare Modern Storefront
+   ==========================================================================
+   Pentru un programator C/Java:
+   Gândește-te la `:root` ca la un fișier de constante globale (`#define` în C
+   sau `public static final` în Java) disponibile în toată aplicația.
+   Schimbarea acestor variabile permite re-tematizarea rapidă a întregii platforme.
+   ========================================================================== */
+
+:root {
+  --color-cream: #F8FAFC;
+  --color-cream-light: #FFFFFF;
+  --color-cream-dark: #F1F5F9;
+  --color-ink: #0F172A;
+  --color-ink-muted: #64748B;
+  --color-ink-light: #94A3B8;
+  --color-ochre: #109E82;
+  --color-ochre-hover: #0D856D;
+  --color-ochre-light: #E6F6F3;
+
+  color-scheme: light;
+  accent-color: var(--color-ochre);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    color-scheme: light;
+    accent-color: var(--color-ochre);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Selecție de text în nuanța brandului Emerald Teal */
+  ::selection {
+    background-color: var(--color-ochre);
+    color: var(--color-cream-light);
+  }
+}
+
+/* Fallback accesibil pentru browserele care nu suportă proprietatea nativă `accent-color` */
+@supports not (accent-color: #109E82) {
+  input[type="checkbox"],
+  input[type="radio"] {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border: 1.5px solid var(--color-ink-muted);
+    border-radius: 0.25rem;
+    background-color: var(--color-cream-light);
+    display: inline-grid;
+    place-content: center;
+  }
+
+  input[type="radio"] {
+    border-radius: 9999px;
+  }
+
+  input[type="checkbox"]:checked,
+  input[type="radio"]:checked {
+    background-color: var(--color-ochre);
+    border-color: var(--color-ochre);
+  }
+}
+
+/* Clase utilitare reutilizabile pentru carduri, câmpuri de formular și butoane */
+@layer components {
+  .catalog-card {
+    @apply bg-white border border-slate-200/90 rounded-2xl shadow-sm;
+  }
+
+  .catalog-input {
+    @apply w-full bg-white border border-slate-200 px-3.5 py-2 text-sm text-ink placeholder:text-ink-muted/70 focus:border-ochre focus:ring-2 focus:ring-ochre/15 focus:outline-none rounded-lg font-sans transition-all;
+  }
+
+  .catalog-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-ochre text-white font-sans font-semibold text-xs sm:text-sm px-5 py-2.5 rounded-lg hover:bg-ochre-hover transition-all shadow-sm disabled:opacity-50;
+  }
+
+  .catalog-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 bg-white text-ink font-sans font-medium text-xs sm:text-sm px-4 py-2 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all rounded-lg;
+  }
+}

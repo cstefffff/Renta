@@ -1,0 +1,23 @@
+{
+  "folders": [
+    {
+      "name": "RentA — Aplicatie Web (MVP)",
+      "path": "."
+    },
+    {
+      "name": "RentA — Design Assets & Logo",
+      "path": "./design-assets"
+    },
+    {
+      "name": "RentA — Baza de Date (Supabase SQL)",
+      "path": "./supabase"
+    }
+  ],
+  "settings": {
+    "terminal.integrated.defaultProfile.windows": "Command Prompt",
+    "files.exclude": {
+      "**/.next": true,
+      "**/node_modules": true
+    }
+  }
+}
