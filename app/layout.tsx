@@ -4,6 +4,7 @@ import "./globals.css";
 import { SidebarRail } from "@/components/layout/SidebarRail";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
 
 /**
  * Configurarea fonturilor locale self-hosted prin `next/font/local`.
@@ -94,6 +95,7 @@ export default function RootLayout({
             <Footer />
           </div>
         </div>
+        <CookieConsentBanner />
       </body>
     </html>
   );

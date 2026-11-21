@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/config";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { dispatchNotification } from "@/app/actions/notifications";
 import { formatZodIssues } from "@/lib/validations/profile";
 import { createReviewSchema } from "@/lib/validations/bookings";
 import type { ActionResponse, Profile, Review } from "@/lib/types/database";
@@ -150,6 +151,16 @@ export async function createReviewAction(
       `Eroare la salvarea recenziei: ${insertError.message}`
     );
   }
+
+  // Notificăm non-blocant utilizatorul care a primit recenzia (Faza 13 / M13.2)
+  await dispatchNotification({
+    userId: String(targetUserId),
+    type: "review_received",
+    title: `Recenzie nouă (${rating}/5 stele) — ${booking.booking_code}`,
+    body: `Ai primit o recenzie de ${rating}/5 stele pentru rezervarea ${booking.booking_code}.`,
+    actionUrl: `/obiect/${booking.listing_id}`,
+    bookingId: String(booking.id),
+  });
 
   revalidatePath("/rezervarile-mele");
   revalidatePath(`/obiect/${booking.listing_id}`);

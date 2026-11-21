@@ -1,0 +1,38 @@
+name: RentA CI — Typecheck, Unit Tests & Production Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: TypeScript, Vitest & Next.js Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      - name: Run unit tests (Vitest)
+        run: npm run test
+
+      - name: Build Next.js production bundle
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://ci-dummy-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.ci_dummy_anon_key_for_build_check_only
+          NEXT_PUBLIC_SITE_URL: https://renta.ro
+        run: npm run build

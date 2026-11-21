@@ -3,9 +3,11 @@ import { BrandLogo } from "@/components/ui/BrandLogo";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { UserMenu } from "@/components/layout/UserMenu";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { FavoriteNavBadge } from "@/components/catalog/FavoriteNavBadge";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { isCurrentUserAdminAction } from "@/app/actions/admin";
 
 /**
  * Bara superioară orizontală (`Header.tsx` — Async Server Component).
@@ -29,6 +31,7 @@ export async function Header() {
   let displayName = "";
   let accountType: "individual" | "company" = "individual";
   let avatarUrl: string | null = null;
+  let isAdmin = false;
 
   if (configured) {
     try {
@@ -38,11 +41,16 @@ export async function Header() {
         if (data.user) {
           userEmail = data.user.email ?? null;
 
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("display_name, account_type, avatar_url")
-            .eq("id", data.user.id)
-            .maybeSingle();
+          const [{ data: profile }, adminFlag] = await Promise.all([
+            supabase
+              .from("profiles")
+              .select("display_name, account_type, avatar_url")
+              .eq("id", data.user.id)
+              .maybeSingle(),
+            isCurrentUserAdminAction(),
+          ]);
+
+          isAdmin = adminFlag;
 
           const fallbackName =
             (typeof data.user.user_metadata?.display_name === "string" &&
@@ -140,6 +148,9 @@ export async function Header() {
             </span>
           </Link>
 
+          {/* 2b. Clopoțel Notificări In-App (doar pentru utilizatorii autentificați) */}
+          {userEmail && <NotificationBell />}
+
           {/* 3. UserMenu („Airbnb Pill”) sau Butoane Autentificare */}
           {userEmail ? (
             <UserMenu
@@ -148,6 +159,7 @@ export async function Header() {
               accountType={accountType}
               avatarUrl={avatarUrl}
               showStatusDb={showStatusDb}
+              isAdmin={isAdmin}
             />
           ) : (
             <div className="flex items-center gap-2">
@@ -173,6 +185,7 @@ export async function Header() {
           displayName={displayName}
           accountType={accountType}
           showStatusDb={showStatusDb}
+          isAdmin={isAdmin}
         />
       </div>
     </header>

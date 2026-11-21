@@ -10,6 +10,7 @@ import { getCategoryLabel, getCategoryCode } from "@/lib/constants/categories";
 import { BookingWidget } from "@/components/bookings/BookingWidget";
 import { FavoriteButton } from "@/components/catalog/FavoriteButton";
 import { ProductGallery } from "@/components/listings/ProductGallery";
+import { ReportListingButton } from "@/components/listings/ReportListingButton";
 
 export const dynamic = "force-dynamic";
 
@@ -322,6 +323,14 @@ export default async function ObjectDetailPage({
                   imediat după confirmarea cererii.
                 </div>
               </div>
+            </div>
+
+            <div className="border-t border-slate-100 pt-3">
+              <ReportListingButton
+                listingId={listing.id}
+                isLoggedIn={isLoggedIn}
+                isOwner={isOwner}
+              />
             </div>
           </div>
 

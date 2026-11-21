@@ -95,9 +95,27 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
             </div>
           )}
 
-          {/* Colțul stânga-sus: Pill discret cu segmentul (Firmă B2C / P2P) + codul de catalog */}
-          <span className="absolute top-2.5 left-2.5 bg-white/90 backdrop-blur-sm text-ink text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm inline-flex items-center gap-1.5">
-            <span>{isCompany ? "🏢 Firmă B2C" : "🤝 P2P"}</span>
+          {/* Colțul stânga-sus: Pill discret cu segmentul (Firmă Verificată / Firmă B2C / P2P) + codul de catalog */}
+          <span
+            className={`absolute top-2.5 left-2.5 backdrop-blur-sm text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm inline-flex items-center gap-1.5 ${
+              isCompany && listing.owner?.kyb_verified
+                ? "bg-emerald-50/95 text-emerald-900 ring-1 ring-emerald-200/80"
+                : "bg-white/90 text-ink"
+            }`}
+          >
+            <span
+              className={
+                isCompany && listing.owner?.kyb_verified
+                  ? "font-semibold text-emerald-800"
+                  : ""
+              }
+            >
+              {isCompany
+                ? listing.owner?.kyb_verified
+                  ? "🏢 Firmă Verificată ✓"
+                  : "🏢 Firmă B2C"
+                : "🤝 P2P"}
+            </span>
             <span className="text-slate-300">&bull;</span>
             <span className="font-mono text-[10px] text-ink-muted">
               {catalogCode}

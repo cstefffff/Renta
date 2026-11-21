@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSupabaseEnv } from "@/lib/supabase/config";
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { dispatchNotification } from "@/app/actions/notifications";
 import { formatZodIssues } from "@/lib/validations/profile";
 import {
   createBookingSchema,
@@ -16,6 +17,7 @@ import type {
   BookingStatus,
   BookingWithDetails,
   ListingImage,
+  PaymentRecord,
   Profile,
 } from "@/lib/types/database";
 
@@ -254,6 +256,18 @@ export async function createBookingAction(
     platform_fee_ron: Number(createdBooking.platform_fee_ron),
   } as Booking;
 
+  // Notificăm non-blocant proprietarul despre noua cerere de rezervare (Faza 13 / M13.2)
+  await dispatchNotification({
+    userId: String(listing.owner_id),
+    type: "booking_created",
+    title: `Cerere nouă de rezervare (${booking.booking_code})`,
+    body: `Ai primit o cerere nouă pentru „${listing.title}” în perioada ${startDate} — ${endDate} (${totalDays} ${
+      totalDays === 1 ? "zi" : "zile"
+    }, ${totalPriceRon} RON).`,
+    actionUrl: "/rezervarile-mele",
+    bookingId: booking.id,
+  });
+
   revalidatePath(`/obiect/${listingId}`);
   revalidatePath("/rezervarile-mele");
 
@@ -392,6 +406,58 @@ export async function updateBookingStatusAction(
     );
   }
 
+  // Trimitem notificare non-blocantă către destinatarul relevant (Faza 13 / M13.2)
+  const notificationConfig: Record<
+    "confirmed" | "rejected" | "completed" | "cancelled",
+    {
+      userId: string;
+      type:
+        | "booking_confirmed"
+        | "booking_rejected"
+        | "booking_completed"
+        | "booking_cancelled";
+      title: string;
+      body: string;
+    }
+  > = {
+    confirmed: {
+      userId: String(booking.renter_id),
+      type: "booking_confirmed",
+      title: `Rezervare confirmată (${booking.booking_code})`,
+      body: `Proprietarul a confirmat rezervarea ${booking.booking_code}. Poți continua cu plata securizată Escrow și poți vedea datele de contact.`,
+    },
+    rejected: {
+      userId: String(booking.renter_id),
+      type: "booking_rejected",
+      title: `Cerere de rezervare respinsă (${booking.booking_code})`,
+      body: `Cererea ta de rezervare ${booking.booking_code} a fost respinsă de proprietar. Poți alege alte date sau un obiect similar din catalog.`,
+    },
+    completed: {
+      userId: String(booking.renter_id),
+      type: "booking_completed",
+      title: `Închiriere finalizată (${booking.booking_code})`,
+      body: `Închirierea ${booking.booking_code} a fost marcată ca finalizată. Acum poți lăsa o recenzie și poți urmări eliberarea garanției.`,
+    },
+    cancelled: {
+      userId: isOwner ? String(booking.renter_id) : String(booking.owner_id),
+      type: "booking_cancelled",
+      title: `Rezervare anulată (${booking.booking_code})`,
+      body: `Rezervarea ${booking.booking_code} a fost anulată de ${
+        isOwner ? "proprietar" : "chiriaș"
+      }.`,
+    },
+  };
+
+  const notif = notificationConfig[nextStatus];
+  await dispatchNotification({
+    userId: notif.userId,
+    type: notif.type,
+    title: notif.title,
+    body: notif.body,
+    actionUrl: "/rezervarile-mele",
+    bookingId: String(booking.id),
+  });
+
   revalidatePath("/rezervarile-mele");
   revalidatePath(`/obiect/${booking.listing_id}`);
 
@@ -485,6 +551,7 @@ function mapRowToBookingWithDetails(row: any): BookingWithDetails {
     renter: normalizeParticipant(rawRenter, row.renter_id, "Chiriaș RentA"),
     owner: normalizeParticipant(rawOwner, row.owner_id, "Proprietar RentA"),
     partner_phone: null,
+    payment: null,
   };
 }
 
@@ -587,10 +654,67 @@ export async function getMyBookingsAction(): Promise<{
     );
   };
 
-  const [incoming, outgoing] = await Promise.all([
+  const [incomingWithPhones, outgoingWithPhones] = await Promise.all([
     attachPartnerPhones(incomingRaw, "renter"),
     attachPartnerPhones(outgoingRaw, "owner"),
   ]);
+
+  // Atașăm înregistrările de plată Escrow din `public.payments` (Faza 11).
+  // Blocul try/catch asigură că pagina `/rezervarile-mele` rămâne 100% funcțională
+  // chiar și înainte ca utilizatorul să ruleze migrația 004_payments_and_escrow.sql.
+  const allBookingIds = [
+    ...incomingWithPhones.map((b) => b.id),
+    ...outgoingWithPhones.map((b) => b.id),
+  ];
+
+  const paymentsMap = new Map<string, PaymentRecord>();
+  if (allBookingIds.length > 0) {
+    try {
+      const { data: paymentsData, error: paymentsError } = await supabase
+        .from("payments")
+        .select("*")
+        .in("booking_id", allBookingIds);
+
+      if (!paymentsError && Array.isArray(paymentsData)) {
+        for (const row of paymentsData) {
+          paymentsMap.set(String(row.booking_id), {
+            id: String(row.id),
+            booking_id: String(row.booking_id),
+            renter_id: String(row.renter_id),
+            owner_id: String(row.owner_id),
+            mode: row.mode === "stripe" ? "stripe" : "sandbox",
+            currency: String(row.currency ?? "RON"),
+            rental_amount_ron: Number(row.rental_amount_ron ?? 0),
+            platform_fee_ron: Number(row.platform_fee_ron ?? 0),
+            owner_payout_ron: Number(row.owner_payout_ron ?? 0),
+            deposit_amount_ron: Number(row.deposit_amount_ron ?? 0),
+            total_charged_ron: Number(row.total_charged_ron ?? 0),
+            stripe_checkout_session_id: row.stripe_checkout_session_id ?? null,
+            stripe_payment_intent_id: row.stripe_payment_intent_id ?? null,
+            stripe_deposit_intent_id: row.stripe_deposit_intent_id ?? null,
+            payment_status: row.payment_status ?? "unpaid",
+            deposit_status: row.deposit_status ?? "none",
+            paid_at: row.paid_at ?? null,
+            released_at: row.released_at ?? null,
+            created_at: String(row.created_at),
+            updated_at: String(row.updated_at),
+          });
+        }
+      }
+    } catch {
+      // Ignorăm silențios dacă tabelul `public.payments` nu există încă în DB
+    }
+  }
+
+  const incoming = incomingWithPhones.map((b) => ({
+    ...b,
+    payment: paymentsMap.get(b.id) ?? null,
+  }));
+
+  const outgoing = outgoingWithPhones.map((b) => ({
+    ...b,
+    payment: paymentsMap.get(b.id) ?? null,
+  }));
 
   return { incoming, outgoing };
 }

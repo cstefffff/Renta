@@ -4,6 +4,146 @@ Toate modificările notabile, deciziile arhitecturale și validările QA ale pla
 
 ---
 
+## [v1.0.0-commercial-wave1-complete] — 2026-11-21
+### Adăugat (Faza 16: Testare Automată Vitest + CI, Observabilitate & Checklist Go-Live `.ro` — `M16.1`–`M16.3` — 100% Roadmap Uz Comercial Valul 1 Finalizat!)
+- **Suite de Teste Automate Vitest & Configurare (`M16.1`)** (`renta-qa-tracker`):
+  - **`vitest.config.ts` & `package.json`**: configurat mediul de testare `node` cu alias `@` aliniat cu `tsconfig.json` și adăugate scripturile `"test": "vitest run"` și `"test:watch": "vitest"`.
+  - **`tests/unit/validations.test.ts` (17 teste)**: acoperă schemele Zod `createListingSchema` & `updateListingSchema` (preț negativ/0 respins, titlu scurt respins, categorie invalidă și garanție negativă respinse, payload valid acceptat), `signUpSchema`, `updateProfileSchema` & `formatZodIssues` (telefon RO, CUI RO), `createBookingSchema`, `createReviewSchema` & `parseIsoDateUtcMs` (`end_date < start_date` respins, UUID invalid respins, rating 1..5), `isValidCategory`/`getCategoryLabel`/`getCategoryCode` și normalizarea URL-ului Supabase (`/rest/v1`) în `getSupabaseEnv`.
+  - **`tests/unit/invoicing-and-security.test.ts` (7 teste)**: acoperă `calculateVatBreakdown` (TVA 19%, TVA 0%, identitatea contabilă `subtotal_ron + vat_amount_ron === total_ron`), `generateEFacturaXmlPreview` (structură XML UBL 2.1 / CIUS-RO 1.0.1 + escape strict împotriva XML Injection / XSS pentru caracterele `<script>&"'`) și Rate Limiter-ul `checkRateLimit` (permite cererile sub limită, blochează peste limită cu `allowed: false` și `retryAfterSeconds > 0`, izolare pe chei și expirare fereastră).
+- **Pipeline GitHub Actions CI (`.github/workflows/ci.yml`)** (`renta-qa-tracker`):
+  - Declanșat automat pe `push` și `pull_request` pe branch-ul `main`: Node 20 cu cache `npm` -> `npm ci` -> `npx tsc --noEmit` -> `npm run test` -> `npm run build` (cu variabile dummy `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` pentru build autonom în CI).
+- **Observabilitate Runtime & Healthcheck (`M16.2`)** (`renta-backend`):
+  - Endpoint `/api/health` (`app/api/health/route.ts`), modul de observabilitate (`lib/observability/*`), eroare globală curată (`app/error.tsx`) și documentare variabile în `.env.example`.
+- **Checklist Go-Live Producție pe Domeniu `.ro` (`GO_LIVE_CHECKLIST.md` — `M16.3`)** (`renta-qa-tracker`):
+  - Ghid operațional în 7 capitole: Domeniu `.ro` + DNS/SSL Vercel, Supabase Production Hardening (migrațiile `001`–`008`, RLS, PITR, promovare `admin`), Stripe Connect Live + Webhook `/api/webhooks/stripe`, Emailuri Live Resend (SPF/DKIM/DMARC), Facturare SRL & RO e-Factura, Observabilitate/Uptime (`/api/health` + Sentry) și Conformitate Legală România (Termeni, GDPR, Cookie Consent, ANPC SAL/SOL).
+- **Confirmare Live Faza 15 (`M15.1`)**: Migrația `008_admin_panel_and_audit.sql` și panoul `/admin` marcate ca `[x] Finalizat & Validat Live (2026-11-21)` în `PROGRESS_TRACKER.md`.
+
+### Verificare QA & Audit Final (`renta-qa-tracker`)
+- **Vitest Unit Tests (`npm.cmd run test`)**: **24 / 24 teste PASS** (2 fișiere de test, 0 eșecuri).
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Status Milestone**: **MVP v0 (30/30) + Roadmap Uz Comercial Valul 1 (18/18) = 100% FINALIZAT (`v1.0.0`).**
+
+---
+
+## [v0.13.0-phase15-admin-panel-and-branding] — 2026-11-21
+### Adăugat (Faza 15: Panou Administrare `/admin`, Audit Log, Raportare Anunțuri & Branding SVG Final — `M15.1`)
+- **Arhitectură Bază de Date & RPC-uri Administrative (`supabase/migrations/008_admin_panel_and_audit.sql`)** (`renta-backend`):
+  - **Funcția `public.is_current_user_admin()` (`SECURITY DEFINER STABLE`)**: verifică sigur dacă utilizatorul autentificat (`auth.uid()`) are `role = 'admin'` în `public.profile_private`, fără a expune tabelul privat prin RLS.
+  - **Tabelul `public.admin_audit_logs`**: jurnal imutabil (append-only) pentru toate deciziile administrative (`admin_id`, `action`, `target_type`, `target_id`, `details`), cu RLS `SELECT` permis exclusiv administratorilor.
+  - **Tabelul `public.listing_reports`**: sesizări trimise de utilizatori pentru anunțuri suspecte (`status` `'open' | 'dismissed' | 'action_taken'`), cu RLS care permite `INSERT` propriu (`auth.uid() = reporter_id`), `SELECT` pentru autor sau admin și `UPDATE` exclusiv pentru admin.
+  - **3 Funcții RPC `SECURITY DEFINER SET search_path = public`**:
+    - `admin_moderate_listing(p_listing_id, p_new_status, p_report_id, p_notes)`: actualizează starea anunțului (`available`/`unavailable`/`archived`), închide raportul asociat și scrie în `admin_audit_logs`.
+    - `admin_verify_company(p_user_id, p_approve)`: activează flag-ul local `renta.trusted_verification = 'on'`, aprobă/revocă `kyb_verified` și jurnalizează acțiunea.
+    - `admin_resolve_dispute(p_dispute_id, p_resolution, p_notes)`: soluționează disputa (`resolved_owner` cu capturarea garanției, `resolved_renter` cu restituirea sumelor sau `closed`), actualizează automat `public.payments` și jurnalizează decizia.
+- **Server Actions & Panou Administrativ `/admin` (`app/actions/admin.ts`, `components/admin/AdminDashboardClient.tsx`, `app/(dashboard)/admin/page.tsx`)** (`renta-backend` + `renta-frontend`):
+  - Verificare dublă a rolului `admin` pe server prin `requireAdminContext()` + politicile RLS SQL.
+  - 4 carduri KPI în timp real (Volum GMV & Comision Platformă 10%, Utilizatori & Anunțuri Active, Dispute Deschise, Rapoarte Anunțuri) și 4 tab-uri interactive (`⚖️ Dispute & Escrow`, `🏢 Verificare Firme (KYB)`, `🚩 Rapoarte Anunțuri`, `📜 Jurnal Audit`), plus ecran `403 Acces Restricționat` cu instrucțiuni SQL de promovare a contului la `admin`.
+- **Raportare Anunțuri & Branding Oficial SVG (`components/listings/ReportListingButton.tsx`, `public/design-assets/logo.svg`, `app/icon.svg`, `components/ui/BrandLogo.tsx`)** (`renta-frontend`):
+  - Buton și modal `🚩 Raportează anunțul` montat pe `/obiect/[id]` pentru utilizatorii non-proprietari.
+  - Emblema vectorială oficială RentA (`public/design-assets/logo.svg` și favicon `app/icon.svg`) integrată în `BrandLogo.tsx` și acces condiționat `🛡️ Panou Admin` în `Header.tsx`, `UserMenu.tsx` și `MobileNav.tsx`.
+
+### Verificare QA & Audit Securitate (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit RLS & `SECURITY DEFINER` (`008_admin_panel_and_audit.sql` & `app/actions/admin.ts`)**:
+  - Toate funcțiile RPC administrative verifică explicit `IF v_admin_id IS NULL OR NOT public.is_current_user_admin() THEN RAISE EXCEPTION` la începutul execuției și au `REVOKE ALL ... FROM PUBLIC` + `GRANT EXECUTE ... TO authenticated`.
+  - Fiecare Server Action din `app/actions/admin.ts` validează sesiunea și `profile_private.role === 'admin'` prin `requireAdminContext()` înainte de orice interogare.
+
+---
+
+## [v0.12.0-phase14-legal-gdpr-and-invoicing] — 2026-11-21
+### Adăugat (Faza 14: Conformitate Legală România & UE, GDPR, ANPC/SOL & Facturare SRL / RO e-Factura — `M14.1`–`M14.2`)
+- **Pagini Legale România & UE, Banner Cookie GDPR & Drepturi Art. 17/20 (`M14.1`)** (`renta-backend` + `renta-frontend`):
+  - **Documente legale complete**: `/termeni-si-conditii` (`app/termeni-si-conditii/page.tsx`), `/confidentialitate` (`app/confidentialitate/page.tsx`) și `/politica-cookie` (`app/politica-cookie/page.tsx`), plus linkuri directe în `Footer.tsx` către **ANPC — SAL** (`https://anpc.ro/ce-este-sal/`) și **Platforma Europeană SOL / ODR** (`https://ec.europa.eu/consumers/odr`).
+  - **Banner Cookie Consent Granular (`components/legal/CookieConsentBanner.tsx` & `app/layout.tsx`)**: opțiuni `Acceptă Toate`, `Doar Esențiale` și `Personalizează` (Esențiale, Analitice, Preferințe), persistate în `localStorage` (`renta_cookie_consent_v1`) cu buton de redeschidere `Preferințe Cookie`.
+  - **Portabilitate Date (Art. 20 GDPR) & Dreptul la Ștergere/Anonimizare (Art. 17 GDPR)**:
+    - `exportMyGdprDataAction` în `app/actions/legal.ts` + descărcare fișier `.json` în `components/profile/GdprPrivacyPanel.tsx` (`/profil`).
+    - Funcție RPC `public.anonymize_my_account_gdpr()` (`SECURITY DEFINER SET search_path = public` în `007_legal_gdpr_and_invoicing.sql`) + `anonymizeMyAccountAction`: verifică lipsa rezervărilor active (`pending`/`confirmed`), arhivează anunțurile utilizatorului și anonimizează PII-ul din `public.profiles` și `public.profile_private`, păstrând integritatea fiscală a facturilor istorice.
+- **Facturare Automată Comision SRL & Export XML UBL 2.1 RO e-Factura (`M14.2`)** (`renta-backend` + `renta-frontend`):
+  - **Tabelul `public.invoices` & Secvența `public.invoice_number_seq` (`007_legal_gdpr_and_invoicing.sql`)**: serie automată `RNT-YYYY-XXXX`, RLS strict pentru participanți (`auth.uid() = owner_id OR auth.uid() = renter_id`), defalcare `subtotal_ron` + `vat_amount_ron` (TVA 19%) = `total_ron` și stare `efactura_status` (`not_applicable` pentru P2P fără CUI, `pending_anaf`/`submitted` pentru firme B2B/B2C).
+  - **Motor Facturare & Generator XML UBL 2.1 (`lib/invoicing/provider.ts` & `app/actions/legal.ts`)**: `calculateVatBreakdown`, `generateEFacturaXmlPreview` (compatibil CIUS-RO 1.0.1 ANAF RO e-Factura cu sanitizare XML) și `issueCommissionInvoiceAction` (idempotent, apelat automat în `releaseEscrowAndDepositAction` din `app/actions/payments.ts` la finalizarea rezervării).
+  - **Vizualizare Factură PDF & Descărcare XML e-Factura (`app/(dashboard)/profil/facturi/[id]/page.tsx`, `InvoicePrintClient.tsx` & `PayoutOnboardingPanel.tsx`)**: pagină fiscală A4 printabilă/PDF cu buton de descărcare `.xml` UBL 2.1 și tabel de facturi emise integrat în `/profil/plati`.
+
+### Verificare QA & Audit Securitate (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit RLS & `SECURITY DEFINER` (`007_legal_gdpr_and_invoicing.sql`)**:
+  - `public.invoices` are `ENABLE ROW LEVEL SECURITY` activ (`SELECT` permis doar pentru `owner_id` și `renter_id`, `INSERT` permis doar pentru `owner_id`).
+  - Funcția `public.anonymize_my_account_gdpr()` folosește `SECURITY DEFINER SET search_path = public`, `REVOKE ALL ... FROM PUBLIC` și `GRANT EXECUTE ... TO authenticated`, plus `set_config('renta.trusted_verification', 'on', true)` local pe tranzacție.
+
+---
+
+## [v0.11.0-phase13-notifications-and-resend] — 2026-11-21
+### Adăugat (Faza 13: Notificări Tranzacționale In-App & Email Resend — `M13.2`)
+- **Bază de Date & Securitate Notificări (`supabase/migrations/006_notifications_and_emails.sql`)** (`renta-backend`):
+  - **Tabelul `public.notifications`**: stochează notificările utilizatorilor (`type` din 10 categorii tranzacționale: `booking_created`, `booking_confirmed`, `booking_rejected`, `booking_completed`, `booking_cancelled`, `payment_paid`, `payment_released`, `dispute_opened`, `review_received`, `system`, plus `title`, `body`, `action_url`, `booking_id`, `is_read`, `email_sent`).
+  - **Politici RLS Stricte**: `SELECT`, `UPDATE` și `DELETE` sunt permise strict pentru proprietarul notificării (`auth.uid() = user_id`), fără politică `INSERT` directă din client (pentru a preveni injectarea de notificări false în inbox-ul altor utilizatori).
+  - **Funcție RPC `public.create_system_notification` (`SECURITY DEFINER SET search_path = public`)**: permite serverului, în contextul unei acțiuni autentificate (`auth.uid() IS NOT NULL`), să insereze în siguranță notificări către partenerul tranzacției.
+- **Serviciu Email Tranzacțional Mod Dual Resend / Sandbox (`lib/email/resend.ts` & `.env.example`)** (`renta-backend`):
+  - Când `RESEND_API_KEY` este configurată, expediază emailuri HTML responsive în stilul RentA Storefront (`#109E82`) prin Resend REST API (`https://api.resend.com/emails`, timeout 5s, sanitizare HTML `escapeHtml`).
+  - Când `RESEND_API_KEY` lipsește, rulează automat în modul gratuit **In-App Sandbox**, fără a bloca fluxul principal.
+- **Server Actions & Integrare în Toate Fluxurile Tranzacționale (`app/actions/notifications.ts`, `bookings.ts`, `payments.ts`, `trust.ts`, `reviews.ts`)** (`renta-backend`):
+  - `getMyNotificationsAction`, `markNotificationReadAction`, `markAllNotificationsReadAction`, `deleteNotificationAction` și `dispatchNotification` (apelat automat la crearea/schimbarea stării unei rezervări, plata în Escrow, eliberarea/reținerea garanției, deschiderea unei dispute și primirea unei recenzii).
+- **Clopoțel Interactiv în Header & Pagina Centrului de Notificări (`components/layout/NotificationBell.tsx`, `Header.tsx`, `UserMenu.tsx`, `MobileNav.tsx`, `app/(dashboard)/notificari/page.tsx`)** (`renta-frontend`):
+  - Dropdown rapid în `Header.tsx` cu badge numeric pentru notificările necitite, marcare ca citit la click și buton „Marchează tot citit”.
+  - Pagina dedicată `/notificari` (`NotificationsPageClient.tsx`) cu filtre `Toate` / `Necitite`, indicator de mod (`Resend Live` vs `In-App Sandbox`), marcare individuală/în masă și ștergere.
+
+### Verificare QA & Audit Securitate (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit RLS, `SECURITY DEFINER` & Variabile Secrete**:
+  - `public.notifications` are RLS activ și blochează `INSERT`-ul direct din client; `create_system_notification` folosește `SECURITY DEFINER SET search_path = public` cu `REVOKE ALL ... FROM PUBLIC` și `GRANT EXECUTE ... TO authenticated`.
+  - Confirmat că `RESEND_API_KEY` nu folosește prefixul `NEXT_PUBLIC_` și este citită exclusiv pe server.
+
+---
+
+## [v0.10.0-phase12-trust-anaf-handover-disputes] — 2026-11-21
+### Adăugat (Faza 12: Încredere, Verificare Telefon OTP, Verificare Firme ANAF, Protocol Foto Check-in/Check-out + Proces-Verbal Digital PDF & Flux Dispute — `M12.1`–`M12.4`)
+- **Verificare Telefon prin OTP SMS — Mod Dual Twilio/Sandbox (`M12.1`)** (`renta-backend` + `renta-frontend`):
+  - **Tabelul `public.phone_otp_codes` (`005_trust_verification_handover_disputes.sql`)**: stochează exclusiv hash-ul SHA-256 al codului OTP (`code_hash`), expirarea la 10 minute (`expires_at`) și contorul de încercări (`attempts < 5`), protejat prin RLS strict `auth.uid() = user_id`.
+  - **Funcție RPC `complete_phone_otp_verification(p_phone, p_code_hash)` (`SECURITY DEFINER`)**: validează atomic hash-ul OTP, marchează codul ca folosit (`consumed_at = NOW()`), activează flag-ul local tranzacției `renta.trusted_verification = 'on'` pentru a trece controlat de trigger-ele anti-falsificare din Migrația 003 și setează `phone_verified = true` atât în `public.profile_private`, cât și în `public.profiles`.
+  - **Server Actions (`app/actions/trust.ts`) & UI (`components/profile/TrustVerificationCard.tsx`)**: `requestPhoneOtpAction` și `verifyPhoneOtpAction`, cu expediere SMS prin Twilio REST API (dacă `TWILIO_ACCOUNT_SID` este configurat) sau afișare directă a codului `demoCode` în modul Sandbox gratuit.
+- **Verificare Automată Firme B2C prin API ANAF (`CUI`) & Badge `🏢 Firmă Verificată ✓` (`M12.2`)** (`renta-backend` + `renta-frontend`):
+  - **Algoritm oficial cifră de control CUI & Interogare ANAF v9 (`verifyCompanyAnafAction`)**: validează matematic CUI-ul cu cheia de test `753217532`, interoghează serviciul oficial `https://webservicesp.anaf.ro/PlatitorTvaRest/api/v9/ws/tva` (timeout 4.5s + fallback determinist când serverul ANAF este în mentenanță) și apelează RPC-ul `complete_company_kyb_verification` (`SECURITY DEFINER`) pentru a popula `kyb_verified = true`, `company_name`, `company_address` și `kyb_verified_at`.
+  - **Badge Vizual în Catalog (`components/catalog/ObjectCard.tsx`)**: afișează badge-ul `🏢 Firmă Verificată ✓` pentru toate anunțurile publicate de firme verificate ANAF (`owner.kyb_verified`).
+- **Protocol Foto Check-in / Check-out & Proces-Verbal Digital PDF (`M12.3`)** (`renta-backend` + `renta-frontend`):
+  - **Tabelul `public.handover_proofs` & Bucket Privat `handover-proofs` (`public = false`)**: politici RLS și Storage care permit încărcarea (`<= 5MB`, `JPG/PNG/WEBP`) și citirea exclusiv pentru cei 2 participanți ai rezervării (`renter_id` sau `owner_id`), cu acces prin Signed URLs temporare (valabile 1 oră) generate pe server în `getHandoverProofsAction`.
+  - **Pagina Proces-Verbal Digital (`app/(dashboard)/rezervarile-mele/[id]/proces-verbal/page.tsx` & `HandoverProtocolClient.tsx`)**: document oficial de predare-primire cu datele părților, echipamentului (`#OBJ-XXXX`), perioadei, tarifelor, grilei de fotografii horodatate la predare (`checkin`) și returnare (`checkout`), bloc de semnături și buton `🖨️ Tipărește / Salvează PDF` (`window.print()` cu stiluri `@media print`).
+- **Flux Dispute & Blocare Automată Garanție Escrow (`M12.4`)** (`renta-backend` + `renta-frontend`):
+  - **Tabelul `public.disputes` & `openDisputeAction`**: permite oricărui participant al unei rezervări `confirmed` sau `completed` să deschidă o dispută (`damage`, `missing_accessories`, `late_return`, `not_as_described`, `other`) cu sumă pretinsă din garanție (`claimed_amount_ron`) și îngheață instantaneu eliberarea garanției (`public.payments.payment_status = 'disputed'`).
+  - **Pagina Dispute (`app/(dashboard)/rezervarile-mele/[id]/disputa/page.tsx` & `DisputeFormClient.tsx`) + Integrare în `BookingCard.tsx`**: formular de deschidere/vizualizare dosar dispută cu probele foto atașate și butoane rapide `📋 Proces-Verbal & Foto Predare/Retur` și `⚠️ Raportează Problemă / Dispută` pe cardul fiecărei rezervări eligibile.
+
+### Verificare QA & Audit Securitate (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit RLS, Bucket Privat & `SECURITY DEFINER` (`005_trust_verification_handover_disputes.sql`)**:
+  - Tabelele `phone_otp_codes`, `handover_proofs` și `disputes` au `ENABLE ROW LEVEL SECURITY` activ; bucket-ul `handover-proofs` este privat (`public = false`) și verifică apartenența la rezervare pe `(storage.foldername(name))[1] = booking_id` și `(storage.foldername(name))[2] = auth.uid()`.
+  - Funcțiile `complete_phone_otp_verification` și `complete_company_kyb_verification` folosesc `SECURITY DEFINER SET search_path = public` și variabila locală pe tranzacție `set_config('renta.trusted_verification', 'on', true)`, menținând intactă protecția împotriva modificării directe din client a coloanelor `phone_verified` și `kyb_verified`.
+
+---
+
+## [v0.9.0-phase11-payments-and-escrow] — 2026-11-21
+### Adăugat (Faza 11: Plăți, Split Comision 10% & Garanție/Escrow — Stripe Connect + Mod Sandbox Gratuit — `M11.1`–`M11.3`)
+- **Arhitectură Financiară Mod Dual & Migrația `004_payments_and_escrow.sql` (`M11.1`)** (`renta-backend`):
+  - **Tabelul `public.payout_accounts`**: conturi de încasare 1:1 cu `public.profiles` (`stripe_account_id`, `mode` `'stripe' | 'sandbox'`, `onboarding_status`, `charges_enabled`, `payouts_enabled`, `details_submitted`, `iban_last4`), protejat prin RLS strict `auth.uid() = user_id`.
+  - **Tabelul `public.payments`**: registru financiar Escrow 1:1 cu `public.bookings` (`rental_amount_ron`, `platform_fee_ron` 10%, `owner_payout_ron` 90%, `deposit_amount_ron`, `total_charged_ron`, `payment_status` `'unpaid' | 'authorized' | 'paid' | 'released' | 'refunded' | 'disputed'`, `deposit_status` `'none' | 'held' | 'released' | 'captured'`), protejat prin RLS strict pentru participanții tranzacției (`auth.uid() = renter_id OR auth.uid() = owner_id`).
+  - **Tabelul `public.stripe_webhook_events`**: tabelă de idempotență cu cheie primară `event_id` și `ENABLE ROW LEVEL SECURITY` fără politici publice (accesibilă exclusiv pe server prin `SUPABASE_SERVICE_ROLE_KEY`).
+  - **Singleton Stripe & Mod Dual (`lib/stripe/config.ts`, `lib/types/database.ts`, `.env.example`)**: comutare automată între API-ul oficial Stripe Connect (`"stripe"`, când `STRIPE_SECRET_KEY` este prezentă) și Simulatorul Escrow Gratuit (`"sandbox"`, când cheile Stripe lipsesc).
+- **Onboarding Financiar Ofertant la `/profil/plati` (`M11.2`)** (`renta-backend` + `renta-frontend`):
+  - **Server Actions (`app/actions/payments.ts`)**: `getMyPayoutAccountAction`, `startPayoutOnboardingAction(formData?)` (creează cont Stripe Connect Express + `accountLinks` sau activează instant contul Sandbox cu ultimele 4 caractere din IBAN) și `getPaymentsForMyBookingsAction`.
+  - **Panou & Pagină dedicată (`components/payments/PayoutOnboardingPanel.tsx` & `app/(dashboard)/profil/plati/page.tsx`)**: afișează starea KYC (`charges_enabled`, `payouts_enabled`, `iban_last4`), cele 4 carduri KPI financiare (Volum Total Chirii, Comision Platformă 10%, Încasări Nete Proprietar 90% și Garanții Blocate în Escrow) și tabelul tranzacțiilor.
+  - **Navigație integrată**: card de acces rapid în `app/(dashboard)/profil/page.tsx` și link `Plăți & Cont Încasare (Escrow)` în secțiunea `CA PROPRIETAR` din `components/layout/UserMenu.tsx`.
+- **Checkout Chiriaș, Garanție Escrow & Webhook Stripe Idempotent (`M11.3`)** (`renta-backend` + `renta-frontend`):
+  - **`initiateBookingCheckoutAction(bookingId)`**: recalculează exclusiv pe server chiria, comisionul de 10% (`platform_fee_ron`), suma netă a proprietarului (`owner_payout_ron`) și garanția (`deposit_amount_ron`), inițiind fie o sesiune `stripe.checkout.sessions.create` (cu `application_fee_amount` și `transfer_data.destination`), fie plata instantanee în Escrow Sandbox.
+  - **`releaseEscrowAndDepositAction(bookingId, depositDecision)`**: permite proprietarului, la returnarea echipamentului, să marcheze rezervarea ca `completed`, să elibereze chiria netă (`payment_status = 'released'`) și să deblocheze garanția către chiriaș (`deposit_status = 'released'`) sau să o rețină pentru daune (`deposit_status = 'captured'`).
+  - **Ruta Webhook `/api/webhooks/stripe` (`app/api/webhooks/stripe/route.ts`)**: verifică semnătura HMAC-SHA256 pe corpul brut (`request.text()`) prin `stripe.webhooks.constructEvent`, garantează idempotența în `public.stripe_webhook_events` (cod PostgreSQL `23505`) și procesează `checkout.session.completed`, `account.updated` și `charge.refunded`.
+  - **Panou Financiar Escrow în `components/bookings/BookingCard.tsx` & `app/actions/bookings.ts`**: fiecare rezervare confirmată/finalizată afișează defalcarea financiară, badge-urile de status pentru plată și garanție, butonul de Checkout pentru chiriaș și butoanele de finalizare + eliberare/reținere garanție pentru proprietar.
+
+### Verificare QA, Build & Audit Securitate (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Production Build (`npm.cmd run build`)**: **0 erori** (`exit code 0`, 16 rute + Middleware compilate cu succes, inclusiv `/profil/plati` și `/api/webhooks/stripe`).
+- **Audit RLS & Variabile Secrete (`004_payments_and_escrow.sql` & `.env.example`)**:
+  - Toate cele 3 tabele financiare noi au `ENABLE ROW LEVEL SECURITY`; `stripe_webhook_events` este complet izolat față de clienții `anon`/`authenticated`.
+  - Nicio cheie privată (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE_KEY`) nu folosește prefixul `NEXT_PUBLIC_`.
+
+---
+
 ## [v0.8.4-multi-photo-gallery-and-cta] — 2026-11-21
 ### Adăugat & Îmbunătățit (Galerie Foto Interactivă, CTA `+ Listează` Pronunțat & Extindere Inventar Multi-Foto)
 - **Evidențiere CTA `+ Listează` în Top Header (`src/components/layout/Header.tsx`)** (`renta-frontend`):

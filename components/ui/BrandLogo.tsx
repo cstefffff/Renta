@@ -6,8 +6,8 @@ import Link from "next/link";
  * Explicație pentru C/Java:
  * În React, o componentă primește un obiect de configurare `props`
  * (similar cu un DTO în Java) și returnează marcaj declarativ JSX.
- * Poate fi afișată atât în modul complet (cu nume și breadcrumb/tag),
- * cât și compact (doar pictograma circulară în bara laterală).
+ * Folosește simbolul SVG geometric oficial RentA (hexagon Emerald Teal `#109E82`
+ * cu litera stilizată `R` în interior) + wordmark-ul `RentA`.
  */
 interface BrandLogoProps {
   showTag?: boolean;
@@ -19,33 +19,37 @@ export function BrandLogo({ showTag = true, iconOnly = false }: BrandLogoProps) 
     <Link
       href="/"
       className="group inline-flex items-center gap-2.5 focus:outline-none"
-      aria-label="RentA Store — Pagina principală"
+      aria-label="RentA — Pagina principală"
     >
-      {/* Pictograma circulară verde-smarald (#109E82) inspirată din designul de referință */}
-      <span className="w-9 h-9 rounded-full bg-ochre text-white inline-flex items-center justify-center shadow-sm group-hover:bg-ochre-hover transition-colors shrink-0">
+      {/* Simbolul vector minimalist RentA (hexagon/cub geometric în Emerald Teal #109E82) */}
+      <span className="w-9 h-9 inline-flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
         <svg
-          className="w-5 h-5"
-          viewBox="0 0 24 24"
+          className="w-9 h-9 drop-shadow-xs"
+          viewBox="0 0 40 40"
           fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
           aria-hidden="true"
         >
-          <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
-          <path d="M12 12l8-4.5" />
-          <path d="M12 12v9" />
-          <path d="M12 12L4 7.5" />
+          <polygon
+            points="20,2 36,11 36,29 20,38 4,29 4,11"
+            className="fill-ochre group-hover:fill-ochre-hover transition-colors"
+          />
+          <path
+            d="M20 2l16 9-16 9-16-9 16-9z"
+            fill="#FFFFFF"
+            fillOpacity="0.12"
+          />
+          <path
+            d="M14 29V11h7.2c3.2 0 5.3 1.8 5.3 4.8 0 2.3-1.4 4-3.6 4.5L26.8 29h-3.8l-3.4-8.1H17.4V29H14zm3.4-11h3.6c1.5 0 2.4-.8 2.4-2.1s-.9-2.1-2.4-2.1h-3.6V18z"
+            fill="#FFFFFF"
+          />
         </svg>
       </span>
 
       {!iconOnly && (
         <div className="flex items-center gap-2">
-          {/* Numele brandului într-un stil modern curat */}
-          <span className="font-display text-lg font-bold tracking-tight text-ink">
-            Rent<span className="text-ochre">A</span>{" "}
-            <span className="font-semibold text-ink">Store</span>
+          {/* Wordmark-ul oficial RentA */}
+          <span className="font-display text-lg font-extrabold tracking-tight text-ink">
+            Rent<span className="text-ochre">A</span>
           </span>
 
           {/* Etichetă opțională discretă */}

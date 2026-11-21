@@ -2,6 +2,8 @@ import Link from "next/link";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getMyFullProfile, signOutAction } from "@/app/actions/auth";
 import { ProfileForm, type ProfileData } from "@/components/profile/ProfileForm";
+import { TrustVerificationCard } from "@/components/profile/TrustVerificationCard";
+import { GdprPrivacyPanel } from "@/components/profile/GdprPrivacyPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +153,65 @@ export default async function ProfilPage() {
         </div>
       </div>
 
+      {/* Card Plăți, Încasări & Stripe Connect */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 rounded-xl bg-ochre-light text-ochre flex items-center justify-center shrink-0">
+            <svg
+              className="w-6 h-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-lg font-bold text-ink">
+                💳 Plăți, Încasări &amp; Stripe Connect
+              </h2>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
+                Escrow &amp; Garanții
+              </span>
+            </div>
+            <p className="text-sm text-ink-muted">
+              Configurează contul bancar pentru încasarea chiriilor (90% net, 10%
+              comision platformă) și monitorizează garanțiile blocate în Escrow.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/profil/plati"
+          className="catalog-btn-primary shrink-0 whitespace-nowrap"
+        >
+          Gestionează Plățile &rarr;
+        </Link>
+      </div>
+
+      {/* Card Verificare Identitate (M12.1 Telefon OTP & M12.2 Firmă ANAF KYB) */}
+      <TrustVerificationCard
+        initialPhone={profileData.phone}
+        phoneVerified={Boolean(profileData.phone_verified)}
+        accountType={profileData.account_type}
+        initialCui={profileData.company_cui}
+        kybVerified={Boolean(profileData.kyb_verified)}
+        companyName={
+          (privateData as { company_legal_name?: string | null } | null)
+            ?.company_legal_name ?? null
+        }
+        companyAddress={
+          (privateData as { company_address?: string | null } | null)
+            ?.company_address ?? null
+        }
+      />
+
       {/* Formular de editare a datelor din public.profiles + public.profile_private */}
       <div className="catalog-card p-6 sm:p-8 space-y-6">
         <div className="border-b border-ink/15 pb-3 flex flex-wrap items-center justify-between gap-2">
@@ -164,6 +225,9 @@ export default async function ProfilPage() {
 
         <ProfileForm profile={profileData} />
       </div>
+
+      {/* Panou Controale GDPR (Art. 20 Export JSON & Art. 17 Anonimizare Cont) */}
+      <GdprPrivacyPanel />
     </div>
   );
 }

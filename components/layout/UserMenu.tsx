@@ -24,6 +24,7 @@ export interface UserMenuProps {
   accountType: "individual" | "company";
   avatarUrl: string | null;
   showStatusDb: boolean;
+  isAdmin?: boolean;
 }
 
 /**
@@ -49,6 +50,7 @@ export function UserMenu({
   accountType,
   avatarUrl,
   showStatusDb,
+  isAdmin = false,
 }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -286,10 +288,52 @@ export function UserMenu({
             </svg>
             <span>+ Adaugă obiect nou</span>
           </Link>
+          <Link
+            href="/profil/plati"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
+          >
+            <svg
+              className="w-4 h-4 text-ink-muted shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <line x1="2" y1="10" x2="22" y2="10" />
+            </svg>
+            <span>Plăți &amp; Încasări</span>
+          </Link>
 
           <div className="border-t border-slate-100 my-1.5" />
 
           {/* Secțiunea 4: Cont & Sistem */}
+          <Link
+            href="/notificari"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
+          >
+            <svg
+              className="w-4 h-4 text-ink-muted shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
+            <span>Notificări</span>
+          </Link>
           <Link
             href="/profil"
             role="menuitem"
@@ -311,6 +355,19 @@ export function UserMenu({
             </svg>
             <span>Profil &amp; setări</span>
           </Link>
+          {isAdmin && (
+            <Link
+              href="/admin"
+              role="menuitem"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 text-sm font-semibold text-ochre hover:bg-ochre-light/60 transition-colors"
+            >
+              <span className="w-4 h-4 inline-flex items-center justify-center shrink-0" aria-hidden="true">
+                🛡️
+              </span>
+              <span>Panou Admin</span>
+            </Link>
+          )}
           {showStatusDb && (
             <Link
               href="/status-db"

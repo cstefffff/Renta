@@ -19,6 +19,7 @@ export interface MobileNavProps {
   displayName?: string | null;
   accountType?: "individual" | "company";
   showStatusDb: boolean;
+  isAdmin?: boolean;
 }
 
 export function MobileNav({
@@ -26,6 +27,7 @@ export function MobileNav({
   displayName,
   accountType = "individual",
   showStatusDb,
+  isAdmin = false,
 }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
@@ -162,12 +164,41 @@ export function MobileNav({
             {userEmail ? (
               <>
                 <Link
+                  href="/notificari"
+                  onClick={() => setOpen(false)}
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-ink font-semibold transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg
+                    className="w-4 h-4 text-ink-muted shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                  </svg>
+                  <span>Notificări</span>
+                </Link>
+                <Link
                   href="/profil"
                   onClick={() => setOpen(false)}
                   className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-ink text-center font-semibold transition-colors"
                 >
                   👤 Profil &amp; setări
                 </Link>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className="p-2.5 rounded-xl bg-ochre-light/70 hover:bg-ochre-light text-ochre text-center font-semibold transition-colors"
+                  >
+                    🛡️ Panou Admin
+                  </Link>
+                )}
                 {showStatusDb && (
                   <Link
                     href="/status-db"

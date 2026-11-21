@@ -4,6 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateBookingStatusAction } from "@/app/actions/bookings";
+import {
+  initiateBookingCheckoutAction,
+  releaseEscrowAndDepositAction,
+} from "@/app/actions/payments";
 import { createReviewAction } from "@/app/actions/reviews";
 import type { BookingStatus, BookingWithDetails } from "@/lib/types/database";
 
@@ -68,10 +72,82 @@ export function BookingCard({ booking, role }: BookingCardProps) {
   const [reviewError, setReviewError] = useState<string | null>(null);
   const [reviewSuccess, setReviewSuccess] = useState<string | null>(null);
 
+  // Stări locale pentru fluxul de Plată Checkout & Garanție Escrow (M11.3)
+  const [paymentBusy, setPaymentBusy] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+
+  const payment = booking.payment ?? null;
   const badge = getStatusBadge(booking.status);
   const bookingCode =
     booking.booking_code || `#REZ-${booking.id.slice(0, 4).toUpperCase()}`;
   const catalogCode = booking.listing?.catalog_code || "#OBJ";
+
+  async function handleCheckout() {
+    setPaymentBusy(true);
+    setPaymentError(null);
+    setPaymentSuccess(null);
+
+    try {
+      const res = await initiateBookingCheckoutAction(booking.id);
+      if (!res.success) {
+        setPaymentError(
+          res.error || "Nu s-a putut iniția plata pentru această rezervare."
+        );
+        return;
+      }
+
+      if (res.data?.checkoutUrl) {
+        window.location.href = res.data.checkoutUrl;
+        return;
+      }
+
+      if (res.data?.simulated) {
+        setPaymentSuccess(
+          res.message ||
+            "Plata și garanția au fost blocate cu succes în Escrow (Sandbox)!"
+        );
+        router.refresh();
+      } else {
+        setPaymentSuccess(res.message || "Plata a fost procesată cu succes!");
+        router.refresh();
+      }
+    } catch {
+      setPaymentError("Eroare la comunicarea cu serverul de plăți.");
+    } finally {
+      setPaymentBusy(false);
+    }
+  }
+
+  async function handleEscrowDecision(
+    decision: "release_all" | "retain_deposit"
+  ) {
+    setPaymentBusy(true);
+    setPaymentError(null);
+    setPaymentSuccess(null);
+
+    try {
+      const res = await releaseEscrowAndDepositAction(booking.id, decision);
+      if (!res.success) {
+        setPaymentError(
+          res.error || "Nu s-a putut procesa decizia Escrow."
+        );
+        return;
+      }
+
+      setPaymentSuccess(
+        res.message ||
+          (decision === "release_all"
+            ? "Fondurile au fost eliberate către ofertant, iar garanția returnată chiriașului!"
+            : "Fondurile au fost decontate, iar garanția a fost reținută conform deciziei.")
+      );
+      router.refresh();
+    } catch {
+      setPaymentError("Eroare la comunicarea cu serverul Escrow.");
+    } finally {
+      setPaymentBusy(false);
+    }
+  }
 
   async function handleTransition(
     nextStatus: "confirmed" | "rejected" | "completed" | "cancelled"
@@ -238,9 +314,107 @@ export function BookingCard({ booking, role }: BookingCardProps) {
         </div>
       </div>
 
+      {/* Banner Status Financiar & Escrow (vizibil pentru rezervări confirmate sau finalizate) */}
+      {(booking.status === "confirmed" || booking.status === "completed") && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
+          {!payment || payment.payment_status === "unpaid" ? (
+            <span className="inline-flex items-center gap-2 font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+              💳 Așteaptă plata chiriei &amp; garanției
+            </span>
+          ) : payment.payment_status === "paid" ? (
+            <span className="inline-flex items-center gap-2 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+              ✓ Plătită ({Number(payment.total_charged_ron).toFixed(0)} RON)
+              &middot; Garanție {Number(payment.deposit_amount_ron).toFixed(0)}{" "}
+              RON în Escrow
+            </span>
+          ) : payment.payment_status === "released" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+                ✓ Fonduri eliberate către ofertant (
+                {Number(payment.owner_payout_ron).toFixed(0)} RON)
+              </span>
+              {payment.deposit_status === "released" && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-white border border-emerald-200 text-emerald-700">
+                  Garanție returnată chiriașului
+                </span>
+              )}
+              {payment.deposit_status === "captured" && (
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-rose-50 border border-rose-200 text-rose-700">
+                  Garanție reținută
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1 rounded-full">
+              Status plată: {payment.payment_status}
+            </span>
+          )}
+
+          {payment && (
+            <span className="font-mono text-[11px] text-ink-muted uppercase">
+              Mod: {payment.mode}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Panou Discret Escrow pentru OFERTANT (eliberare/reținere garanție după finalizare) */}
+      {role === "owner" &&
+        booking.status === "completed" &&
+        payment?.payment_status === "paid" && (
+          <div className="rounded-xl border border-ochre/25 bg-ochre-light/40 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <div className="text-xs font-bold text-ink">
+                Decontare Escrow &amp; Decizie Garanție
+              </div>
+              <p className="text-xs text-ink-muted">
+                Confirmă returnarea obiectului în stare bună pentru a elibera
+                garanția chiriașului și a încasa suma netă.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                disabled={paymentBusy}
+                onClick={() => handleEscrowDecision("release_all")}
+                className="catalog-btn-primary py-1.5 px-4 text-xs"
+              >
+                {paymentBusy
+                  ? "Se procesează..."
+                  : `✓ Eliberează Garanția & Încasează (${Number(
+                      payment.owner_payout_ron
+                    ).toFixed(0)} RON)`}
+              </button>
+              {Number(payment.deposit_amount_ron) > 0 && (
+                <button
+                  type="button"
+                  disabled={paymentBusy}
+                  onClick={() => handleEscrowDecision("retain_deposit")}
+                  className="px-3 py-1.5 rounded-lg border border-rose-300 bg-white hover:bg-rose-50 text-rose-700 font-sans font-medium text-xs transition-colors disabled:opacity-50"
+                >
+                  Reține Garanția (
+                  {Number(payment.deposit_amount_ron).toFixed(0)} RON)
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
       {errorMsg && (
         <div className="p-2.5 border border-red-800/40 bg-red-900/10 font-mono text-xs text-red-950">
           [EROARE]: {errorMsg}
+        </div>
+      )}
+
+      {paymentError && (
+        <div className="p-2.5 rounded-xl border border-rose-200 bg-rose-50 text-xs font-medium text-rose-800">
+          {paymentError}
+        </div>
+      )}
+
+      {paymentSuccess && (
+        <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-xs font-medium text-emerald-800">
+          {paymentSuccess}
         </div>
       )}
 
@@ -250,14 +424,33 @@ export function BookingCard({ booking, role }: BookingCardProps) {
         </div>
       )}
 
-      {/* Bară de Acțiuni (State Machine Transitions + Declanșator Recenzie) */}
+      {/* Bară de Acțiuni (State Machine Transitions + Trust Links + Declanșator Recenzie) */}
       <div className="pt-3 border-t border-ink/15 flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href={`/obiect/${booking.listing_id}`}
-          className="font-mono text-xs text-ink-muted hover:text-ink underline underline-offset-4"
-        >
-          Vezi Fișa Obiectului ({catalogCode}) &rarr;
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href={`/obiect/${booking.listing_id}`}
+            className="font-mono text-xs text-ink-muted hover:text-ink underline underline-offset-4 mr-1"
+          >
+            Vezi Fișa Obiectului ({catalogCode}) &rarr;
+          </Link>
+
+          {(booking.status === "confirmed" || booking.status === "completed") && (
+            <>
+              <Link
+                href={`/rezervarile-mele/${booking.id}/proces-verbal`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-ochre-light hover:border-ochre/40 text-ink font-sans text-xs font-medium transition-colors"
+              >
+                <span>📄 Proces-Verbal &amp; Poze</span>
+              </Link>
+              <Link
+                href={`/rezervarile-mele/${booking.id}/disputa`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100/80 text-amber-900 font-sans text-xs font-medium transition-colors"
+              >
+                <span>⚠️ Dispută</span>
+              </Link>
+            </>
+          )}
+        </div>
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Acțiuni disponibile pentru PROPRIETAR (Ofertant) */}
@@ -306,6 +499,21 @@ export function BookingCard({ booking, role }: BookingCardProps) {
               {busy ? "Se anulează..." : "Anulează Cererea"}
             </button>
           )}
+
+          {role === "renter" &&
+            booking.status === "confirmed" &&
+            (!payment || payment.payment_status === "unpaid") && (
+              <button
+                type="button"
+                disabled={paymentBusy}
+                onClick={handleCheckout}
+                className="catalog-btn-primary py-1.5 px-4 text-xs"
+              >
+                {paymentBusy
+                  ? "Se inițiază plata..."
+                  : "💳 Plătește & Blochează Garanția"}
+              </button>
+            )}
 
           {/* Buton Acordare Recenzie disponibil când închirierea este FINALIZATĂ */}
           {booking.status === "completed" && !reviewSuccess && (
