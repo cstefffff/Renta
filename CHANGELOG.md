@@ -4,6 +4,80 @@ Toate modificările notabile, deciziile arhitecturale și validările QA ale pla
 
 ---
 
+## [v0.8.4-multi-photo-gallery-and-cta] — 2026-11-21
+### Adăugat & Îmbunătățit (Galerie Foto Interactivă, CTA `+ Listează` Pronunțat & Extindere Inventar Multi-Foto)
+- **Evidențiere CTA `+ Listează` în Top Header (`src/components/layout/Header.tsx`)** (`renta-frontend`):
+  - Butonul `+ Listează` din dreapta header-ului a fost transformat într-o pastilă pronunțată (`h-9 px-4 rounded-full bg-ochre hover:bg-ochre-hover text-white text-xs font-semibold shadow-sm`), aliniată la înălțime cu butonul rotund `Favorite (♥)` (`w-9 h-9`) și capsula `UserMenu`.
+- **Galerie Foto Interactivă pe Pagina Obiectului (`src/components/listings/ProductGallery.tsx` & `src/app/obiect/[id]/page.tsx`)** (`renta-frontend`):
+  - Componentă client `ProductGallery.tsx` pentru navigarea între fotografiile echipamentului: butoane anterioară/următoare (`‹` / `›`), indicator `1 / N fotografii` și rând de miniaturi (thumbnails) interactive cu chenar activ Emerald Teal (`ring-2 ring-ochre/30`).
+- **Indicator Număr Fotografii pe Carduri & Grilă Catalog 12/Pagină (`src/components/catalog/ObjectCard.tsx` & `src/app/catalog/page.tsx`)** (`renta-frontend`):
+  - Afișarea unui badge cu iconiță cameră + numărul total de fotografii în colțul dreapta-jos al imaginii pentru toate anunțurile cu mai multe poze (`images.length > 1`).
+  - Ajustarea `pageSize` la `12` în `/catalog` pentru rânduri complete pe grilele de 2, 3 și 4 coloane.
+- **Populare Inventar Multi-Foto în Supabase (`#OBJ-0014` – `#OBJ-0023`)**:
+  - Adăugarea a **10 anunțuri noi** (5 P2P + 5 Firme B2C), fiecare având câte **3 fotografii distincte** (vedere principală, detaliu tehnic și accesorii incluse — 30 imagini noi încărcate în bucket-ul `listing-images`), ridicând inventarul activ al platformei la **23 de anunțuri**.
+
+### Verificare QA (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+
+---
+
+## [v0.8.3-compact-header-airbnb-pill] — 2026-11-21
+### Schimbat & Adăugat (Header Compact „Airbnb Pill” & Scurtătură Căutare `Ctrl + K`)
+- **Decongestionare Top Header (`src/components/layout/Header.tsx`)** (`renta-frontend`):
+  - Eliminarea celor 7 elemente concurente din dreapta (badge-ul static `🇷🇴 RO`, linkul text `Favorite`, butoanele separate `Rezervări` și `Inventar`, pastila cu emailul lung și butonul separat `Delogare`).
+  - Păstrarea a doar **3 acțiuni clare** în zona din dreapta: CTA-ul primar **`+ Listează`** (`/listarile-mele/nou`), butonul rotund icon-only **`Favorite (♥)`** (`/favorite`) cu badge numeric flotant (`FavoriteNavBadge`) și capsula de cont **`<UserMenu />`**.
+- **Meniu Dropdown de Cont în Stil „Airbnb Pill” (`src/components/layout/UserMenu.tsx`)** (`renta-frontend`):
+  - Buton-capsulă (`rounded-full`) cu iconiță hamburger (`☰`) + avatar (fotografie sau inițiale pe fundal `#E6F6F3`) și punct verde de sesiune activă.
+  - Dropdown structurat pe **5 secțiuni**:
+    1. **Antet Identitate**: nume/companie, email și badge de cont (`CONT P2P` vs `FIRMĂ B2C`).
+    2. **Secțiunea „CA CHIRIAȘ”**: `Rezervările Mele` (`/rezervarile-mele`), `Anunțuri Apreciate` (`/favorite` cu contor live) și `Explorează Catalogul` (`/catalog`).
+    3. **Secțiunea „CA PROPRIETAR”**: `Inventarul Meu` (`/listarile-mele`) și `+ Adaugă Obiect Nou` (`/listarile-mele/nou`).
+    4. **Secțiunea „CONT & SISTEM”**: `Profil & Verificare` (`/profil`).
+    5. **Footer Acțiune**: `Delogare` (`signOutAction`).
+  - Accesibilitate completă: `aria-expanded`, `aria-haspopup="menu"`, închidere la tasta `Escape` cu restaurarea focusului pe butonul trigger, închidere la click în exterior și la schimbarea rutei (`usePathname`).
+- **Bară de Căutare cu Scurtătură Reală `Ctrl + K` / `⌘ + K` (`src/components/layout/SearchBar.tsx`)** (`renta-frontend`):
+  - Ascultător global `keydown` pentru `Ctrl + K` (Windows/Linux) și `⌘ + K` (macOS) care mută instantaneu focusul și selectează textul din inputul de căutare, plus tasta `Escape` pentru `blur()`.
+- **Aliniere Sertar Mobil (`src/components/layout/MobileNav.tsx`)** (`renta-frontend`):
+  - Reorganizarea linkurilor din meniul mobil pe aceleași secțiuni semantice (`Ca Chiriaș`, `Ca Proprietar`, `Cont & Sistem`) pentru consistență între desktop și mobil.
+
+### Verificare QA (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit Accesibilitate (a11y)**: Meniul `UserMenu` și sertarul `MobileNav` gestionează corect `Escape`, click-outside, atributele ARIA și focusul din tastatură.
+
+---
+
+## [v0.8.2-favorites-system] — 2026-11-21
+### Adăugat & Îmbunătățit (Sistemul de Anunțuri Apreciate / Favorite)
+- **Server Actions pentru Favorite & Sincronizare Cont (`src/app/actions/listings.ts`)** (`renta-backend`):
+  - `getListingsByIdsAction(ids: string[])`: validează lista de UUID-uri (maxim 50), interoghează anunțurile disponibile din `public.listings` cu `owner` și `category`, și păstrează ordinea exactă a ID-urilor salvate de utilizator.
+  - `getUserFavoriteIdsAction()`: returnează lista `user_metadata.favorite_listing_ids` din Supabase Auth pentru utilizatorul autentificat (sau `[]` pentru vizitatori).
+  - `syncUserFavoriteIdsAction(ids: string[])`: validează UUID-urile și persistă lista de favorite în `auth.updateUser({ data: { favorite_listing_ids } })`.
+- **Store Reactiv cu `useSyncExternalStore` & Sincronizare Hibridă (`src/lib/favorites/useFavorites.ts`)** (`renta-frontend`):
+  - Persistență instantanee în `localStorage` (`renta_favorite_listing_ids_v1`) sincronizată între toate componentele și tab-urile deschise, plus reconciliere automată (union) cu `user_metadata.favorite_listing_ids` din Supabase Auth pentru utilizatorii autentificați.
+- **Buton Interactiv de Apreciere & Badge Live în Navigație (`src/components/catalog/FavoriteButton.tsx`, `FavoriteNavBadge.tsx`, `ObjectCard.tsx`, `src/app/obiect/[id]/page.tsx`)** (`renta-frontend`):
+  - Înlocuirea iconiței decorative de pe `ObjectCard.tsx` cu componenta interactivă `FavoriteButton` (`<button type="button" aria-pressed={active}>`), eliminând efectul fals de înroșire la `group-hover` pe card: inimioara își schimbă culoarea doar la hover direct pe buton sau când anunțul este apreciat (`fill-current text-rose-500 bg-rose-50 border-rose-200`).
+  - Integrarea butonului `Salvează` / `Salvat la favorite` și în antetul paginii de detaliu `/obiect/[id]`.
+  - Adăugarea linkului către `/favorite` cu contor numeric live (`FavoriteNavBadge`) în `SidebarRail.tsx`, `Header.tsx` și `MobileNav.tsx`.
+- **Pagina Dedicată Anunțuri Apreciate (`src/app/favorite/page.tsx` — `/favorite`)** (`renta-frontend`):
+  - Pagină completă pentru vizualizarea și gestionarea anunțurilor salvate, cu filtre rapide pe segment (`Toate` / `De la Oameni (P2P)` / `Firme de Închirieri (B2C)`), acțiune de golire a listei și stare goală cu CTA-uri directe către `/catalog`.
+
+### Verificare QA (`renta-qa-tracker`)
+- **TypeScript Check (`npx.cmd tsc --noEmit`)**: **0 erori** (`exit code 0`).
+- **Audit Securitate Server Actions**: Toate ID-urile transmise către `getListingsByIdsAction` și `syncUserFavoriteIdsAction` sunt filtrate cu regex strict UUID și plafonate la maximum 50 de elemente.
+
+---
+
+## [v0.8.1-demo-seed-and-live-deploy] — 2026-11-21
+### Adăugat & Validat Live
+- **Deployment Vercel & Confirmare Migrație `003_commercial_hardening.sql`**:
+  - Aplicația a fost publicată pe Vercel (`https://renta-peach.vercel.app`) și conectată la instanța Supabase cu schema comercială completă (`deposit_ron`, `min_rental_days`, `cancellation_policy`, `rating_avg`, `profile_private`).
+- **Populare Conturi Demo & Inventar Multi-Categorie (`#OBJ-0002` – `#OBJ-0013`)**:
+  - **4 conturi noi** (2 Peer-to-Peer + 2 Firme B2C): `Andrei Popescu` (București), `ProRent Unelte & Utilaje SRL` (Cluj-Napoca), `Elena Ionescu` (Brașov) și `EventSound & Party Logistics SRL` (Timișoara).
+  - **12 anunțuri noi** distribuite în toate cele 8 categorii (`scule-unelte`, `foto-video`, `camping-outdoor`, `evenimente-party`, `electronice`, `vestimentar`, `sport-timp-liber`, `altele`) și 5 orașe, fiecare cu imagine încărcată în Supabase Storage (`listing-images`).
+  - **3 fluxuri complete de rezervare & recenzie** (`#REZ-0006` – `#REZ-0008`), populând ratingurile reale pe `#OBJ-0002` (5★), `#OBJ-0007` (5★) și `#OBJ-0011` (4★).
+
+---
+
 ## [v0.8.0-storefront-ui-redesign] — 2026-11-16
 ### Schimbat & Adăugat (Modern Storefront / E-Commerce Dashboard UI Redesign)
 - **Design System Modular & Tokeni Semantici (`tailwind.config.ts` & `src/app/globals.css`)** (`renta-frontend`):

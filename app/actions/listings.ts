@@ -1103,3 +1103,169 @@ export async function getUnavailableDateRangesAction(
     end_date: String(row.end_date),
   }));
 }
+
+/**
+ * Helper intern pentru curățarea și deduplicarea unei liste de ID-uri de anunțuri
+ * (analog cu filtrarea unui `List<String>` prin `LinkedHashSet<String>` în Java,
+ * păstrând ordinea de inserție și limitând capacitatea la 50 de elemente).
+ */
+function sanitizeFavoriteIds(ids: unknown): string[] {
+  if (!Array.isArray(ids)) {
+    return [];
+  }
+
+  const seen = new Set<string>();
+  const cleanIds: string[] = [];
+
+  for (const item of ids) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+
+    seen.add(trimmed);
+    cleanIds.push(trimmed);
+
+    if (cleanIds.length >= 50) {
+      break;
+    }
+  }
+
+  return cleanIds;
+}
+
+/**
+ * 10. INTEROGARE ANUNȚURI DUPĂ O LISTĂ DE ID-URI (`getListingsByIdsAction`)
+ *
+ * Folosită de pagina de Anunțuri Apreciate / Favorite pentru a încărca
+ * fișele complete ale obiectelor salvate, păstrând ordinea exactă din `ids`
+ * (astfel încât obiectele adăugate cel mai recent la favorite să apară primele).
+ */
+export async function getListingsByIdsAction(
+  ids: string[]
+): Promise<ListingWithDetails[]> {
+  const cleanIds = sanitizeFavoriteIds(ids);
+  if (cleanIds.length === 0) {
+    return [];
+  }
+
+  const { isConfigured } = getSupabaseEnv();
+  if (!isConfigured) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  if (!supabase) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select(
+      `
+      *,
+      images:listing_images(*),
+      owner:profiles!listings_owner_id_fkey(${PUBLIC_OWNER_SELECT})
+    `
+    )
+    .in("id", cleanIds);
+
+  if (error || !data) {
+    return [];
+  }
+
+  const byId = new Map<string, ListingWithDetails>();
+  for (const row of data) {
+    const mapped = mapRowToListingWithDetails(row);
+    byId.set(mapped.id, mapped);
+  }
+
+  const ordered: ListingWithDetails[] = [];
+  for (const id of cleanIds) {
+    const item = byId.get(id);
+    if (item) {
+      ordered.push(item);
+    }
+  }
+
+  return ordered;
+}
+
+/**
+ * 11. CITIRE ID-URI FAVORITE DIN METADATELE CONTULUI (`getUserFavoriteIdsAction`)
+ *
+ * Dacă utilizatorul este autentificat, citește `user.user_metadata.favorite_listing_ids`
+ * și returnează lista curățată (max 50 ID-uri). Pentru vizitatori neautentificați
+ * returnează `[]`.
+ */
+export async function getUserFavoriteIdsAction(): Promise<string[]> {
+  const { isConfigured } = getSupabaseEnv();
+  if (!isConfigured) {
+    return [];
+  }
+
+  const supabase = await createClient();
+  if (!supabase) {
+    return [];
+  }
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    return [];
+  }
+
+  return sanitizeFavoriteIds(user.user_metadata?.favorite_listing_ids);
+}
+
+/**
+ * 12. SINCRONIZARE ID-URI FAVORITE ÎN CONTUL UTILIZATORULUI (`syncUserFavoriteIdsAction`)
+ *
+ * Salvează lista curățată de ID-uri favorite (max 50) în `user_metadata.favorite_listing_ids`
+ * prin `supabase.auth.updateUser`, astfel încât favoritele să fie disponibile pe toate
+ * dispozitivele utilizatorului fără a necesita o tabelă suplimentară.
+ */
+export async function syncUserFavoriteIdsAction(
+  ids: string[]
+): Promise<ActionResponse<string[]>> {
+  const cleanIds = sanitizeFavoriteIds(ids);
+
+  const { isConfigured } = getSupabaseEnv();
+  if (!isConfigured) {
+    return successResponse("Sincronizat local.", []);
+  }
+
+  const supabase = await createClient();
+  if (!supabase) {
+    return successResponse("Sincronizat local.", []);
+  }
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return successResponse("Sincronizat local.", []);
+  }
+
+  const { error: updateError } = await supabase.auth.updateUser({
+    data: {
+      favorite_listing_ids: cleanIds,
+    },
+  });
+
+  if (updateError) {
+    return errorResponse(
+      `Nu s-a putut sincroniza lista de favorite: ${updateError.message}`
+    );
+  }
+
+  return successResponse(
+    "Lista de favorite a fost sincronizată în cont.",
+    cleanIds
+  );
+}
+

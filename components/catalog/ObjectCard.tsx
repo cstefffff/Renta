@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { getCategoryLabel, getCategoryCode } from "@/lib/constants/categories";
+import { FavoriteButton } from "@/components/catalog/FavoriteButton";
 import type { ListingWithDetails } from "@/lib/types/database";
 
 /**
@@ -108,6 +109,26 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
             {getCategoryCode(listing.category)} &bull;{" "}
             {getCategoryLabel(listing.category)}
           </span>
+
+          {/* Colțul dreapta-jos: Indicator număr fotografii dacă anunțul are galerie (> 1 poză) */}
+          {sortedImages.length > 1 && (
+            <span className="absolute bottom-2.5 right-2.5 bg-slate-900/75 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1">
+              <svg
+                className="w-3 h-3 shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              <span>{sortedImages.length}</span>
+            </span>
+          )}
         </Link>
 
         {/* 2. Titlu + Inimioară Favorite */}
@@ -121,18 +142,11 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
             </h3>
           </Link>
 
-          <span
-            className="text-slate-400 group-hover:text-rose-500 transition-colors shrink-0 select-none"
-            aria-hidden="true"
-            title="Salvează la favorite"
-          >
-            <svg
-              className="w-4 h-4 fill-current"
-              viewBox="0 0 24 24"
-            >
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-            </svg>
-          </span>
+          <FavoriteButton
+            listingId={listing.id}
+            listingTitle={listing.title}
+            variant="icon"
+          />
         </div>
 
         {/* 3. Rândul de Rating (Stele Galbene + Recenzii) */}

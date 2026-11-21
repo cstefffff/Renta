@@ -1,31 +1,60 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/BrandLogo";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { SearchBar } from "@/components/layout/SearchBar";
+import { UserMenu } from "@/components/layout/UserMenu";
+import { FavoriteNavBadge } from "@/components/catalog/FavoriteNavBadge";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { signOutAction } from "@/app/actions/auth";
 
 /**
  * Bara superioară orizontală (`Header.tsx` — Async Server Component).
  *
- * Explicație pentru C/Java:
+ * Explicație pentru dezvoltatori C / Java:
  * - Această componentă rulează pe server la fiecare cerere, verifică sesiunea
- *   activă din Supabase și randează antetul modern în stilul "Corelystics Store":
+ *   activă din Supabase și profilul utilizatorului (`public.profiles`).
+ * - Arhitectura vizuală (Varianta A — „Airbnb Pill”):
  *   1. Stânga: Breadcrumb (`RentA Store › Catalog & Închirieri`)
- *   2. Centru: Bară de căutare rotunjită cu lupă SVG, `name="q"` și scurtătura `⌘ + F`
- *   3. Dreapta: Selector țară (`🇷🇴 RO`), acces rapid Rezervări/Inventar și Cont
+ *   2. Centru: `<SearchBar />` cu focus prin scurtătura `Ctrl K` / `⌘ K`
+ *   3. Dreapta (doar 3 elemente curate):
+ *      - Link discret `+ Listează` (`/listarile-mele/nou`)
+ *      - Buton rotund icon-only `Favorite (♥)` cu badge flotant
+ *      - `<UserMenu />` („Airbnb Pill”) sau butoanele `Autentificare` / `Cont Nou`
  */
 export async function Header() {
   const configured = isSupabaseConfigured();
   const showStatusDb = process.env.NODE_ENV !== "production";
+
   let userEmail: string | null = null;
+  let displayName = "";
+  let accountType: "individual" | "company" = "individual";
+  let avatarUrl: string | null = null;
 
   if (configured) {
     try {
       const supabase = await createClient();
       if (supabase) {
         const { data } = await supabase.auth.getUser();
-        userEmail = data.user?.email ?? null;
+        if (data.user) {
+          userEmail = data.user.email ?? null;
+
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name, account_type, avatar_url")
+            .eq("id", data.user.id)
+            .maybeSingle();
+
+          const fallbackName =
+            (typeof data.user.user_metadata?.display_name === "string" &&
+              data.user.user_metadata.display_name.trim()) ||
+            userEmail?.split("@")[0] ||
+            "Utilizator RentA";
+
+          displayName = profile?.display_name?.trim() || fallbackName;
+          accountType =
+            profile?.account_type === "company" ? "company" : "individual";
+          avatarUrl = profile?.avatar_url ?? null;
+        }
       }
     } catch {
       userEmail = null;
@@ -61,127 +90,76 @@ export async function Header() {
           </nav>
         </div>
 
-        {/* Centru: Bară de căutare globală rotunjită cu badge `⌘ + F` */}
-        <form
-          action="/catalog"
-          method="GET"
-          className="hidden md:flex items-center w-full max-w-md bg-slate-100/90 hover:bg-slate-100 focus-within:bg-white focus-within:ring-2 focus-within:ring-ochre/20 border border-transparent focus-within:border-ochre rounded-xl px-3.5 py-2 transition-all"
-        >
-          <svg
-            className="w-4 h-4 text-ink-muted shrink-0 mr-2.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="search"
-            name="q"
-            placeholder="Caută echipamente, unelte, #OBJ..."
-            aria-label="Caută produse în catalog"
-            className="w-full bg-transparent text-sm text-ink placeholder:text-ink-muted focus:outline-none"
-          />
-          <kbd className="hidden lg:inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] font-mono font-medium text-ink-muted bg-white border border-slate-200 rounded-md shadow-2xs shrink-0">
-            ⌘ + F
-          </kbd>
-        </form>
+        {/* Centru: Bară de căutare globală cu scurtătura Ctrl K / ⌘ K */}
+        <SearchBar />
 
-        {/* Dreapta Desktop: Selector limbă + Iconițe rapide + Cont Utilizator */}
+        {/* Dreapta Desktop: Doar 3 elemente aerisite (+ Listează, Favorite ♥, Airbnb Pill / Auth) */}
         <div className="hidden md:flex items-center gap-2.5">
-          {/* Selector regiune / limbă */}
-          <span
-            title="România — RON (Lei)"
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100/80 text-xs font-medium text-ink select-none"
-          >
-            <span aria-hidden="true">🇷🇴</span>
-            <span>RO</span>
-          </span>
-
-          {/* Buton rapid Rezervările Mele */}
+          {/* 1. Buton pronunțat + Listează (armonizat h-9 și rounded-full cu Favorite & UserMenu) */}
           <Link
-            href="/rezervarile-mele"
-            title="Rezervările Mele"
-            aria-label="Rezervările Mele"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-ink transition-colors"
+            href="/listarile-mele/nou"
+            className="h-9 inline-flex items-center gap-1.5 px-4 rounded-full bg-ochre hover:bg-ochre-hover text-white text-xs font-semibold shadow-sm hover:shadow transition-all"
           >
             <svg
-              className="w-4 h-4 text-ink-muted"
+              className="w-3.5 h-3.5 shrink-0"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.9"
+              strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
             </svg>
-            <span className="hidden xl:inline">Rezervări</span>
+            <span>Listează</span>
           </Link>
 
-          {/* Buton rapid Inventarul Meu */}
+          {/* 2. Buton rotund icon-only Favorite (♥) */}
           <Link
-            href="/listarile-mele"
-            title="Inventarul Meu"
-            aria-label="Inventarul Meu"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-ink transition-colors"
+            href="/favorite"
+            title="Anunțuri Apreciate / Favorite"
+            aria-label="Anunțuri Apreciate / Favorite"
+            className="relative w-9 h-9 rounded-full border border-slate-200 bg-white hover:bg-rose-50 hover:border-rose-200 flex items-center justify-center text-ink-muted hover:text-rose-500 transition-colors"
           >
             <svg
-              className="w-4 h-4 text-ink-muted"
+              className="w-4 h-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="1.9"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
+              <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
             </svg>
-            <span className="hidden xl:inline">Inventar</span>
+            <span className="absolute -top-1 -right-1">
+              <FavoriteNavBadge />
+            </span>
           </Link>
 
-          <div className="h-5 w-px bg-slate-200 mx-0.5" />
-
+          {/* 3. UserMenu („Airbnb Pill”) sau Butoane Autentificare */}
           {userEmail ? (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/profil"
-                title="Profilul și Identitatea Mea"
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-ochre-light/70 hover:bg-ochre-light text-xs font-semibold text-ochre transition-colors max-w-[190px]"
-              >
-                <span className="w-2 h-2 rounded-full bg-ochre shrink-0" />
-                <span className="truncate">{userEmail}</span>
-              </Link>
-              <form action={signOutAction}>
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-xs font-medium text-ink-muted hover:text-ink transition-colors"
-                >
-                  Delogare
-                </button>
-              </form>
-            </div>
+            <UserMenu
+              email={userEmail}
+              displayName={displayName}
+              accountType={accountType}
+              avatarUrl={avatarUrl}
+              showStatusDb={showStatusDb}
+            />
           ) : (
             <div className="flex items-center gap-2">
               <Link
                 href="/login"
-                className="px-3.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-ink transition-colors"
+                className="px-3.5 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-xs font-medium text-ink transition-colors"
               >
                 Autentificare
               </Link>
               <Link
                 href="/inregistrare"
-                className="px-3.5 py-1.5 rounded-lg bg-ochre hover:bg-ochre-hover text-xs font-semibold text-white shadow-xs transition-colors"
+                className="px-3.5 py-1.5 rounded-full bg-ochre hover:bg-ochre-hover text-xs font-semibold text-white shadow-xs transition-colors"
               >
                 Cont Nou
               </Link>
@@ -190,7 +168,12 @@ export async function Header() {
         </div>
 
         {/* Dreapta Mobil: Meniu Hamburger */}
-        <MobileNav userEmail={userEmail} showStatusDb={showStatusDb} />
+        <MobileNav
+          userEmail={userEmail}
+          displayName={displayName}
+          accountType={accountType}
+          showStatusDb={showStatusDb}
+        />
       </div>
     </header>
   );

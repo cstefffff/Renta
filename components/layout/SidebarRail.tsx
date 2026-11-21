@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { FavoriteNavBadge } from "@/components/catalog/FavoriteNavBadge";
 
 /**
  * Bara laterală verticală cu iconițe (`SidebarRail.tsx`).
@@ -28,6 +29,7 @@ function SidebarNavLinks() {
     pathname === "/catalog" && currentSegment === "company";
   const isMyListings = pathname?.startsWith("/listarile-mele") ?? false;
   const isMyBookings = pathname?.startsWith("/rezervarile-mele") ?? false;
+  const isFavorites = pathname?.startsWith("/favorite") ?? false;
 
   const navItemClass = (active: boolean) =>
     `w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
@@ -132,7 +134,29 @@ function SidebarNavLinks() {
         </svg>
       </Link>
 
-      {/* 5. Inventarul Meu */}
+      {/* 5. Anunțuri Apreciate / Favorite */}
+      <Link
+        href="/favorite"
+        title="Anunțuri Apreciate — Favoritele Tale"
+        aria-label="Anunțuri Apreciate — Favoritele Tale"
+        className={`relative ${navItemClass(isFavorites)}`}
+      >
+        <svg
+          className="w-5 h-5"
+          viewBox="0 0 24 24"
+          fill={isFavorites ? "currentColor" : "none"}
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+        </svg>
+        <FavoriteNavBadge className="absolute -top-1 -right-1 shadow-xs" />
+      </Link>
+
+      {/* 6. Inventarul Meu */}
       <Link
         href="/listarile-mele"
         title="Inventarul Meu — Obiecte Listate"

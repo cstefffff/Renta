@@ -8,6 +8,8 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { getCategoryLabel, getCategoryCode } from "@/lib/constants/categories";
 import { BookingWidget } from "@/components/bookings/BookingWidget";
+import { FavoriteButton } from "@/components/catalog/FavoriteButton";
+import { ProductGallery } from "@/components/listings/ProductGallery";
 
 export const dynamic = "force-dynamic";
 
@@ -93,8 +95,6 @@ export default async function ObjectDetailPage({
   const sortedImages = [...(listing.images || [])].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
   );
-  const primaryImage = sortedImages[0]?.url || null;
-  const secondaryImages = sortedImages.slice(1);
 
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -123,12 +123,19 @@ export default async function ObjectDetailPage({
           </span>
         </div>
 
-        <Link
-          href="/catalog"
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-ochre-light text-ink hover:text-ochre font-semibold transition-all"
-        >
-          &larr; Înapoi la Catalog
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <FavoriteButton
+            listingId={listing.id}
+            listingTitle={listing.title}
+            variant="pill"
+          />
+          <Link
+            href="/catalog"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-slate-100 hover:bg-ochre-light text-ink hover:text-ochre font-semibold transition-all"
+          >
+            &larr; Înapoi la Catalog
+          </Link>
+        </div>
       </div>
 
       {/* Layout în 2 coloane pe desktop: Stânga (Detalii Produs & Galerie) + Dreapta (Calculator Rezervare) */}
@@ -217,56 +224,13 @@ export default async function ObjectDetailPage({
             </div>
           </div>
 
-          {/* Galeria Foto a Obiectului */}
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-semibold text-ink">
-                Galerie Foto Produs ({sortedImages.length} imagini)
-              </span>
-              <span className="font-mono text-ink-muted">{catalogCode}</span>
-            </div>
-
-            {primaryImage ? (
-              <div className="space-y-3">
-                <div className="relative h-80 sm:h-[420px] w-full bg-slate-100 rounded-xl overflow-hidden border border-slate-200/60">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={primaryImage}
-                    alt={listing.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-
-                {secondaryImages.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3">
-                    {secondaryImages.map((img, index) => (
-                      <div
-                        key={img.id || index}
-                        className="h-24 sm:h-28 bg-slate-100 rounded-xl overflow-hidden border border-slate-200/60"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={img.url}
-                          alt={`${listing.title} - foto ${index + 2}`}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-72 flex flex-col items-center justify-center p-6 text-center text-xs text-ink-muted bg-slate-100 rounded-xl">
-                <div className="px-4 py-2 rounded-full bg-white border border-slate-200 font-semibold text-ink mb-2">
-                  Fără fotografie atașată
-                </div>
-                <p>
-                  Proprietarul nu a atașat încă o fotografie pentru fișa{" "}
-                  <span className="font-mono font-semibold">{catalogCode}</span>.
-                </p>
-              </div>
-            )}
-          </div>
+          {/* Galeria Foto Interactivă a Obiectului */}
+          <ProductGallery
+            images={sortedImages}
+            title={listing.title}
+            catalogCode={catalogCode}
+            categoryLabel={getCategoryLabel(listing.category)}
+          />
 
           {/* Specificații Tehnice & Condiții de Predare */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-3">
