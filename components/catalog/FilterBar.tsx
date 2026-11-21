@@ -1,18 +1,38 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { LISTING_CATEGORIES, getCategoryLabel } from "@/lib/constants/categories";
-import type { CatalogSortOption } from "@/lib/types/database";
+import { useRouter } from "next/navigation";
+import {
+  ArrowUpDown,
+  Banknote,
+  Building2,
+  Check,
+  ChevronDown,
+  Layers,
+  MapPin,
+  Star,
+  User,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
+import {
+  LISTING_CATEGORIES,
+  getCategoryLabel,
+} from "@/lib/constants/categories";
+import { RENTA_CITIES, type CatalogSortOption } from "@/lib/types/database";
 
 /**
- * Sidebar Vertical de Filtrare & Căutare (`components/catalog/FilterBar.tsx`).
+ * Bară Orizontală de Filtre cu Dropdown-uri „Pill” (`components/catalog/FilterBar.tsx`).
  *
- * Analogie pentru C/Java:
- * - Funcționează ca un panou de filtre declarativ („stateless view”) într-o aplicație MVC:
- *   starea curentă este citită din URL (`FilterBarValues`), iar fiecare acțiune (bifă categorie,
- *   prag de preț, pill de oraș, rating sau segment) generează un nou query string (`/catalog?...`)
- *   evaluat server-side în PostgreSQL.
- * - Respectă ghidul Modern Web Guidance (`brand-consistent-forms` & `color`):
- *   starea selectată este marcată întotdeauna prin pictogramă vizibilă (`✓` sau `★`) + bordură,
- *   nu doar prin schimbarea culorii.
+ * Explicație pentru dezvoltatori C / Java:
+ * - Aceasta este o componentă Client (`"use client"`) deoarece gestionează
+ *   starea locală efemeră a dropdown-urilor deschise (`useState`), evenimentele
+ *   de tastatură (`Escape`) și click-ul în afara barei (`useEffect` + `useRef`).
+ * - Sursa de adevăr pentru filtre rămâne URL-ul (`/catalog?category=...&city=...`),
+ *   iar fiecare selecție navighează prin Next.js Router (`router.push` / `<Link>`),
+ *   declanșând re-evaluarea filtrării direct în PostgreSQL (Server Component).
  */
 export interface FilterBarValues {
   segment?: "all" | "individual" | "company";
@@ -24,13 +44,7 @@ export interface FilterBarValues {
   sort?: CatalogSortOption;
 }
 
-const CITY_PILLS: readonly { name: string; dotClass: string }[] = [
-  { name: "București", dotClass: "bg-emerald-500" },
-  { name: "Cluj-Napoca", dotClass: "bg-blue-500" },
-  { name: "Timișoara", dotClass: "bg-orange-500" },
-  { name: "Iași", dotClass: "bg-purple-500" },
-  { name: "Brașov", dotClass: "bg-amber-500" },
-];
+type DropdownKey = "category" | "city" | "price" | "segment" | "sort";
 
 const PRICE_RANGES: readonly {
   label: string;
@@ -38,34 +52,102 @@ const PRICE_RANGES: readonly {
   max: string;
 }[] = [
   { label: "Sub 50 RON", min: "", max: "50" },
-  { label: "50 RON – 100 RON", min: "50", max: "100" },
-  { label: "100 RON – 250 RON", min: "100", max: "250" },
+  { label: "50–100 RON", min: "50", max: "100" },
+  { label: "100–250 RON", min: "100", max: "250" },
   { label: "Peste 250 RON", min: "250", max: "" },
 ];
 
-const RATING_PILLS: readonly {
+const SEGMENT_OPTIONS: readonly {
+  key: "all" | "individual" | "company";
   label: string;
-  sortValue: CatalogSortOption;
+  pillLabel: string;
+  icon: LucideIcon;
 }[] = [
-  { label: "5 ★", sortValue: "rating_desc" },
-  { label: "> 4 ★", sortValue: "rating_desc" },
-  { label: "> 3 ★", sortValue: "rating_desc" },
-  { label: "> 2 ★", sortValue: "rating_desc" },
-  { label: "Toate", sortValue: "newest" },
+  {
+    key: "all",
+    label: "Toate",
+    pillLabel: "Personal / Business",
+    icon: Users,
+  },
+  {
+    key: "individual",
+    label: "Personal",
+    pillLabel: "Personal",
+    icon: User,
+  },
+  {
+    key: "company",
+    label: "Business",
+    pillLabel: "Business",
+    icon: Building2,
+  },
+];
+
+const SORT_OPTIONS: readonly {
+  value: CatalogSortOption;
+  label: string;
+  showStar?: boolean;
+}[] = [
+  { value: "newest", label: "Cele mai noi" },
+  { value: "rating_desc", label: "Rating", showStar: true },
+  { value: "price_asc", label: "Preț crescător" },
+  { value: "price_desc", label: "Preț descrescător" },
 ];
 
 export function FilterBar({ values }: { values: FilterBarValues }) {
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
   const activeSegment = values.segment || "all";
-  const activeSort = values.sort || "newest";
+  const activeSort: CatalogSortOption = values.sort || "newest";
   const activeCategory = values.category || "";
   const activeCity = values.city || "";
   const activeMinPrice = values.minPrice || "";
   const activeMaxPrice = values.maxPrice || "";
   const activeQ = values.q || "";
 
+  // Ce dropdown este deschis curent (analog unui enum nullable în Java)
+  const [openDropdown, setOpenDropdown] = useState<DropdownKey | null>(null);
+  // Starea controlată a câmpurilor Min/Max din popover-ul de preț
+  const [minPriceInput, setMinPriceInput] = useState<string>(activeMinPrice);
+  const [maxPriceInput, setMaxPriceInput] = useState<string>(activeMaxPrice);
+
+  // Sincronizează input-urile de preț atunci când URL-ul se schimbă extern (ex. „Șterge tot”)
+  useEffect(() => {
+    setMinPriceInput(activeMinPrice);
+    setMaxPriceInput(activeMaxPrice);
+  }, [activeMinPrice, activeMaxPrice]);
+
+  // Închide popover-ul activ la apăsarea tastei Escape sau la click în afara barei
+  useEffect(() => {
+    if (!openDropdown) return;
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setOpenDropdown(null);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpenDropdown(null);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [openDropdown]);
+
   /**
-   * Funcție utilitară care construiește un URL `/catalog?...` aplicând modificări
-   * peste parametrii activi (similar cu un Builder pattern din Java).
+   * Construiește URL-ul `/catalog?...` aplicând modificări parțiale peste
+   * parametrii activi (similar cu Builder pattern în Java).
    */
   function buildFilterHref(overrides: Partial<FilterBarValues>): string {
     const merged: FilterBarValues = {
@@ -96,509 +178,606 @@ export function FilterBar({ values }: { values: FilterBarValues }) {
     return qs ? `/catalog?${qs}` : "/catalog";
   }
 
+  function applyFilter(overrides: Partial<FilterBarValues>) {
+    setOpenDropdown(null);
+    router.push(buildFilterHref(overrides));
+  }
+
+  function toggleDropdown(key: DropdownKey) {
+    setOpenDropdown((prev) => (prev === key ? null : key));
+  }
+
+  function handleCustomPriceSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    applyFilter({
+      minPrice: minPriceInput.trim(),
+      maxPrice: maxPriceInput.trim(),
+    });
+  }
+
+  const hasPriceFilter = Boolean(activeMinPrice || activeMaxPrice);
   const hasActiveFilters =
-    activeSegment !== "all" ||
+    Boolean(activeQ) ||
     Boolean(activeCategory) ||
     Boolean(activeCity) ||
-    Boolean(activeMinPrice) ||
-    Boolean(activeMaxPrice) ||
-    Boolean(activeQ);
+    hasPriceFilter ||
+    activeSegment !== "all";
+
+  // Etichetă compactă pentru pill-ul de preț
+  const pricePillLabel = (() => {
+    if (activeMinPrice && activeMaxPrice) {
+      return `${activeMinPrice}–${activeMaxPrice} RON`;
+    }
+    if (activeMinPrice) {
+      return `Peste ${activeMinPrice} RON`;
+    }
+    if (activeMaxPrice) {
+      return `Sub ${activeMaxPrice} RON`;
+    }
+    return "Preț / zi";
+  })();
+
+  const activeSegmentOption =
+    SEGMENT_OPTIONS.find((opt) => opt.key === activeSegment) ??
+    SEGMENT_OPTIONS[0];
+  const ActiveSegmentIcon = activeSegmentOption.icon;
+
+  const activeSortOption =
+    SORT_OPTIONS.find((opt) => opt.value === activeSort) ?? SORT_OPTIONS[0];
+
+  const pillClass = (isActive: boolean, isOpen: boolean) =>
+    `inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs border transition-colors cursor-pointer select-none ${
+      isActive
+        ? "bg-ochre-light text-ochre border-ochre/30 font-semibold"
+        : "bg-white text-ink border-slate-200 hover:border-slate-300 hover:bg-slate-50 font-medium"
+    } ${isOpen ? "ring-2 ring-ochre/20 border-ochre/40" : ""}`;
+
+  const optionItemClass = (isSelected: boolean) =>
+    `w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl text-xs text-left transition-colors cursor-pointer ${
+      isSelected
+        ? "bg-ochre-light text-ochre font-semibold"
+        : "text-ink hover:bg-slate-50"
+    }`;
 
   return (
-    <aside className="bg-white border border-slate-200/90 rounded-2xl p-5 space-y-6 shadow-sm">
-      {/* Antet Filtre */}
-      <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <svg
-            className="w-4 h-4 text-ochre"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75"
-            />
-          </svg>
-          <h2 className="font-display font-bold text-sm text-ink">Filtre</h2>
+    <div ref={containerRef} className="space-y-3">
+      {/* Rândul principal orizontal: 4 Pill-uri Filtre (stânga) + Pill Ordonare (dreapta) */}
+      <div className="bg-white border border-slate-200/90 rounded-2xl px-3.5 py-2.5 shadow-sm flex flex-wrap items-center justify-between gap-2.5">
+        {/* Stânga — 4 Pill-uri Dropdown interactive */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* 1. Pill Categorie */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => toggleDropdown("category")}
+              aria-expanded={openDropdown === "category"}
+              aria-haspopup="listbox"
+              className={pillClass(
+                Boolean(activeCategory),
+                openDropdown === "category"
+              )}
+            >
+              <Layers
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span className="max-w-[160px] truncate">
+                {activeCategory
+                  ? getCategoryLabel(activeCategory)
+                  : "Categorie"}
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                  openDropdown === "category" ? "rotate-180" : ""
+                }`}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+
+            {openDropdown === "category" && (
+              <div
+                role="listbox"
+                aria-label="Selectează categoria"
+                className="absolute left-0 top-full mt-2 w-64 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl p-2 z-40 space-y-0.5"
+              >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!activeCategory}
+                  onClick={() => applyFilter({ category: "" })}
+                  className={optionItemClass(!activeCategory)}
+                >
+                  <span>Toate categoriile</span>
+                  {!activeCategory && (
+                    <Check
+                      className="w-3.5 h-3.5 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+
+                {LISTING_CATEGORIES.map((cat) => {
+                  const isSelected = activeCategory === cat.slug;
+                  return (
+                    <button
+                      key={cat.slug}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() =>
+                        applyFilter({ category: isSelected ? "" : cat.slug })
+                      }
+                      className={optionItemClass(isSelected)}
+                    >
+                      <span className="truncate">{cat.label}</span>
+                      {isSelected && (
+                        <Check
+                          className="w-3.5 h-3.5 shrink-0"
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 2. Pill Oraș */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => toggleDropdown("city")}
+              aria-expanded={openDropdown === "city"}
+              aria-haspopup="listbox"
+              className={pillClass(
+                Boolean(activeCity),
+                openDropdown === "city"
+              )}
+            >
+              <MapPin
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{activeCity || "Oraș"}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                  openDropdown === "city" ? "rotate-180" : ""
+                }`}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+
+            {openDropdown === "city" && (
+              <div
+                role="listbox"
+                aria-label="Selectează orașul"
+                className="absolute left-0 top-full mt-2 w-64 max-h-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl p-2 z-40 space-y-0.5"
+              >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!activeCity}
+                  onClick={() => applyFilter({ city: "" })}
+                  className={optionItemClass(!activeCity)}
+                >
+                  <span>Toate orașele</span>
+                  {!activeCity && (
+                    <Check
+                      className="w-3.5 h-3.5 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                  )}
+                </button>
+
+                {RENTA_CITIES.map((cityName) => {
+                  const isSelected = activeCity === cityName;
+                  return (
+                    <button
+                      key={cityName}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() =>
+                        applyFilter({ city: isSelected ? "" : cityName })
+                      }
+                      className={optionItemClass(isSelected)}
+                    >
+                      <span>{cityName}</span>
+                      {isSelected && (
+                        <Check
+                          className="w-3.5 h-3.5 shrink-0"
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Pill Preț / zi */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => toggleDropdown("price")}
+              aria-expanded={openDropdown === "price"}
+              aria-haspopup="dialog"
+              className={pillClass(hasPriceFilter, openDropdown === "price")}
+            >
+              <Banknote
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{pricePillLabel}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                  openDropdown === "price" ? "rotate-180" : ""
+                }`}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+
+            {openDropdown === "price" && (
+              <div
+                role="dialog"
+                aria-label="Filtrează după preț pe zi"
+                className="absolute left-0 top-full mt-2 w-72 rounded-2xl border border-slate-200 bg-white shadow-xl p-3 z-40 space-y-3"
+              >
+                <div className="space-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => applyFilter({ minPrice: "", maxPrice: "" })}
+                    className={optionItemClass(!hasPriceFilter)}
+                  >
+                    <span>Orice preț</span>
+                    {!hasPriceFilter && (
+                      <Check
+                        className="w-3.5 h-3.5 shrink-0"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+
+                  {PRICE_RANGES.map((range) => {
+                    const isSelected =
+                      activeMinPrice === range.min &&
+                      activeMaxPrice === range.max;
+                    return (
+                      <button
+                        key={range.label}
+                        type="button"
+                        onClick={() =>
+                          applyFilter(
+                            isSelected
+                              ? { minPrice: "", maxPrice: "" }
+                              : { minPrice: range.min, maxPrice: range.max }
+                          )
+                        }
+                        className={optionItemClass(isSelected)}
+                      >
+                        <span>{range.label}</span>
+                        {isSelected && (
+                          <Check
+                            className="w-3.5 h-3.5 shrink-0"
+                            strokeWidth={1.8}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Interval personalizat Min - Max */}
+                <form
+                  onSubmit={handleCustomPriceSubmit}
+                  className="pt-2.5 border-t border-slate-100 space-y-2"
+                >
+                  <p className="text-[11px] font-semibold text-ink-muted px-1">
+                    Interval personalizat (RON / zi)
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={minPriceInput}
+                      onChange={(e) => setMinPriceInput(e.target.value)}
+                      placeholder="Min"
+                      aria-label="Preț minim RON pe zi"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-ochre focus:bg-white focus:outline-none"
+                    />
+                    <span className="text-xs text-ink-muted">–</span>
+                    <input
+                      type="number"
+                      min={0}
+                      inputMode="numeric"
+                      value={maxPriceInput}
+                      onChange={(e) => setMaxPriceInput(e.target.value)}
+                      placeholder="Max"
+                      aria-label="Preț maxim RON pe zi"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-ochre focus:bg-white focus:outline-none"
+                    />
+                    <button
+                      type="submit"
+                      className="shrink-0 rounded-xl bg-ochre hover:bg-ochre-hover text-white px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Aplică
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
+
+          {/* 4. Pill Personal / Business */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => toggleDropdown("segment")}
+              aria-expanded={openDropdown === "segment"}
+              aria-haspopup="listbox"
+              className={pillClass(
+                activeSegment !== "all",
+                openDropdown === "segment"
+              )}
+            >
+              <ActiveSegmentIcon
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{activeSegmentOption.pillLabel}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                  openDropdown === "segment" ? "rotate-180" : ""
+                }`}
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </button>
+
+            {openDropdown === "segment" && (
+              <div
+                role="listbox"
+                aria-label="Selectează segmentul proprietarului"
+                className="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-slate-200 bg-white shadow-xl p-2 z-40 space-y-0.5"
+              >
+                {SEGMENT_OPTIONS.map((opt) => {
+                  const isSelected = activeSegment === opt.key;
+                  const OptionIcon = opt.icon;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      role="option"
+                      aria-selected={isSelected}
+                      onClick={() => applyFilter({ segment: opt.key })}
+                      className={optionItemClass(isSelected)}
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <OptionIcon
+                          className="w-3.5 h-3.5 shrink-0"
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                        <span>{opt.label}</span>
+                      </span>
+                      {isSelected && (
+                        <Check
+                          className="w-3.5 h-3.5 shrink-0"
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
-        <Link
-          href="/catalog"
-          className="text-xs font-semibold text-ochre hover:underline"
-        >
-          Șterge tot
-        </Link>
+        {/* Dreapta — Pill de Ordonare */}
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => toggleDropdown("sort")}
+            aria-expanded={openDropdown === "sort"}
+            aria-haspopup="listbox"
+            className={pillClass(
+              activeSort !== "newest",
+              openDropdown === "sort"
+            )}
+          >
+            <ArrowUpDown
+              className="w-3.5 h-3.5 shrink-0"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span className="text-ink-muted font-normal">Ordonează:</span>
+            <span className="font-semibold inline-flex items-center gap-1">
+              <span>{activeSortOption.label}</span>
+              {activeSortOption.showStar && (
+                <Star
+                  className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              )}
+            </span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 shrink-0 transition-transform ${
+                openDropdown === "sort" ? "rotate-180" : ""
+              }`}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          </button>
+
+          {openDropdown === "sort" && (
+            <div
+              role="listbox"
+              aria-label="Ordonează anunțurile"
+              className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-slate-200 bg-white shadow-xl p-2 z-40 space-y-0.5"
+            >
+              {SORT_OPTIONS.map((opt) => {
+                const isSelected = activeSort === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => applyFilter({ sort: opt.value })}
+                    className={optionItemClass(isSelected)}
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span>{opt.label}</span>
+                      {opt.showStar && (
+                        <Star
+                          className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                          strokeWidth={1.8}
+                          aria-hidden="true"
+                        />
+                      )}
+                    </span>
+                    {isSelected && (
+                      <Check
+                        className="w-3.5 h-3.5 shrink-0"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Chip-uri de filtre active */}
+      {/* Rând discret de chip-uri active — randat DOAR când există cel puțin un filtru activ */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap gap-1.5 pb-4 border-b border-slate-100">
+        <div className="flex flex-wrap items-center gap-2 px-1">
           {activeQ && (
             <Link
               href={buildFilterHref({ q: "" })}
-              className="bg-slate-100 hover:bg-slate-200 text-ink text-[11px] px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200 hover:border-ochre/40 hover:bg-ochre-light/50 text-xs text-ink transition-colors"
               title="Elimină căutarea"
             >
-              <span className="truncate max-w-[130px]">&ldquo;{activeQ}&rdquo;</span>
-              <span className="text-slate-500 font-bold leading-none">&times;</span>
-            </Link>
-          )}
-
-          {activeSegment !== "all" && (
-            <Link
-              href={buildFilterHref({ segment: "all" })}
-              className="bg-slate-100 hover:bg-slate-200 text-ink text-[11px] px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors"
-            >
-              <span>
-                {activeSegment === "company" ? "Firme B2C" : "Peer-to-Peer"}
+              <span className="truncate max-w-[180px]">
+                Căutare: &ldquo;{activeQ}&rdquo;
               </span>
-              <span className="text-slate-500 font-bold leading-none">&times;</span>
+              <X
+                className="w-3 h-3 text-ink-muted shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </Link>
           )}
 
           {activeCategory && (
             <Link
               href={buildFilterHref({ category: "" })}
-              className="bg-slate-100 hover:bg-slate-200 text-ink text-[11px] px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ochre-light border border-ochre/30 text-xs font-medium text-ochre transition-colors hover:bg-ochre/15"
+              title="Elimină filtrul de categorie"
             >
+              <Layers
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span>{getCategoryLabel(activeCategory)}</span>
-              <span className="text-slate-500 font-bold leading-none">&times;</span>
+              <X
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </Link>
           )}
 
           {activeCity && (
             <Link
               href={buildFilterHref({ city: "" })}
-              className="bg-slate-100 hover:bg-slate-200 text-ink text-[11px] px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ochre-light border border-ochre/30 text-xs font-medium text-ochre transition-colors hover:bg-ochre/15"
+              title="Elimină filtrul de oraș"
             >
+              <MapPin
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span>{activeCity}</span>
-              <span className="text-slate-500 font-bold leading-none">&times;</span>
+              <X
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </Link>
           )}
 
-          {(activeMinPrice || activeMaxPrice) && (
+          {hasPriceFilter && (
             <Link
               href={buildFilterHref({ minPrice: "", maxPrice: "" })}
-              className="bg-slate-100 hover:bg-slate-200 text-ink text-[11px] px-2.5 py-1 rounded-md inline-flex items-center gap-1.5 transition-colors"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ochre-light border border-ochre/30 text-xs font-medium text-ochre transition-colors hover:bg-ochre/15"
+              title="Elimină filtrul de preț"
             >
-              <span>
-                {activeMinPrice || "0"} – {activeMaxPrice || "∞"} RON
-              </span>
-              <span className="text-slate-500 font-bold leading-none">&times;</span>
+              <Banknote
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{pricePillLabel}</span>
+              <X
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
             </Link>
           )}
+
+          {activeSegment !== "all" && (
+            <Link
+              href={buildFilterHref({ segment: "all" })}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ochre-light border border-ochre/30 text-xs font-medium text-ochre transition-colors hover:bg-ochre/15"
+              title="Elimină filtrul de segment"
+            >
+              <ActiveSegmentIcon
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{activeSegmentOption.label}</span>
+              <X
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </Link>
+          )}
+
+          <Link
+            href="/catalog"
+            className="text-xs font-semibold text-ochre hover:underline px-1.5 py-1"
+          >
+            Șterge tot
+          </Link>
         </div>
       )}
-
-      {/* Căutare rapidă după cuvânt cheie sau cod #OBJ */}
-      <form action="/catalog" method="GET" className="space-y-2">
-        {activeSegment !== "all" && (
-          <input type="hidden" name="segment" value={activeSegment} />
-        )}
-        {activeCategory && (
-          <input type="hidden" name="category" value={activeCategory} />
-        )}
-        {activeCity && <input type="hidden" name="city" value={activeCity} />}
-        {activeMinPrice && (
-          <input type="hidden" name="minPrice" value={activeMinPrice} />
-        )}
-        {activeMaxPrice && (
-          <input type="hidden" name="maxPrice" value={activeMaxPrice} />
-        )}
-        {activeSort !== "newest" && (
-          <input type="hidden" name="sort" value={activeSort} />
-        )}
-
-        <label
-          htmlFor="sidebar-q"
-          className="block text-xs font-semibold text-ink"
-        >
-          Caută în catalog
-        </label>
-        <div className="flex items-center gap-1.5">
-          <input
-            id="sidebar-q"
-            name="q"
-            type="text"
-            defaultValue={activeQ}
-            placeholder="Ex: Bosch, Sony, #OBJ..."
-            className="w-full rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-ochre focus:bg-white focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-lg bg-slate-100 hover:bg-ochre hover:text-white text-ink px-2.5 py-1.5 text-xs font-semibold transition-colors"
-            title="Caută"
-          >
-            Caută
-          </button>
-        </div>
-      </form>
-
-      {/* Secțiunea 1: Categorie (Category) */}
-      <div className="space-y-3 pt-2 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xs font-bold uppercase tracking-wider text-ink">
-            Categorie
-          </h3>
-          <svg
-            className="w-3.5 h-3.5 text-ink-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
-
-        <ul className="space-y-2">
-          <li>
-            <Link
-              href={buildFilterHref({ category: "" })}
-              className="flex items-center gap-2.5 text-xs group"
-            >
-              <span
-                className={`w-4 h-4 rounded flex items-center justify-center border text-[10px] font-bold transition-colors ${
-                  !activeCategory
-                    ? "bg-ochre border-ochre text-white"
-                    : "border-slate-300 bg-white group-hover:border-ochre"
-                }`}
-              >
-                {!activeCategory ? "✓" : null}
-              </span>
-              <span
-                className={
-                  !activeCategory
-                    ? "font-semibold text-ink"
-                    : "text-ink-muted group-hover:text-ink"
-                }
-              >
-                Toate categoriile
-              </span>
-            </Link>
-          </li>
-
-          {LISTING_CATEGORIES.map((cat) => {
-            const isSelected = activeCategory === cat.slug;
-            return (
-              <li key={cat.slug}>
-                <Link
-                  href={buildFilterHref({
-                    category: isSelected ? "" : cat.slug,
-                  })}
-                  className="flex items-center justify-between gap-2 text-xs group"
-                >
-                  <span className="flex items-center gap-2.5 min-w-0">
-                    <span
-                      className={`w-4 h-4 shrink-0 rounded flex items-center justify-center border text-[10px] font-bold transition-colors ${
-                        isSelected
-                          ? "bg-ochre border-ochre text-white"
-                          : "border-slate-300 bg-white group-hover:border-ochre"
-                      }`}
-                    >
-                      {isSelected ? "✓" : null}
-                    </span>
-                    <span
-                      className={`truncate ${
-                        isSelected
-                          ? "font-semibold text-ink"
-                          : "text-ink-muted group-hover:text-ink"
-                      }`}
-                    >
-                      {cat.label}
-                    </span>
-                  </span>
-                  <span className="font-mono text-[10px] text-slate-400 shrink-0">
-                    {cat.code.replace("#CAT-", "")}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      {/* Secțiunea 2: Preț / Zi (Price) */}
-      <div className="space-y-3 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xs font-bold uppercase tracking-wider text-ink">
-            Preț / Zi
-          </h3>
-          <svg
-            className="w-3.5 h-3.5 text-ink-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
-
-        {/* Praguri rapide */}
-        <ul className="space-y-2">
-          {PRICE_RANGES.map((range) => {
-            const isSelected =
-              activeMinPrice === range.min && activeMaxPrice === range.max;
-            return (
-              <li key={range.label}>
-                <Link
-                  href={buildFilterHref(
-                    isSelected
-                      ? { minPrice: "", maxPrice: "" }
-                      : { minPrice: range.min, maxPrice: range.max }
-                  )}
-                  className="flex items-center gap-2.5 text-xs group"
-                >
-                  <span
-                    className={`w-4 h-4 shrink-0 rounded flex items-center justify-center border text-[10px] font-bold transition-colors ${
-                      isSelected
-                        ? "bg-ochre border-ochre text-white"
-                        : "border-slate-300 bg-white group-hover:border-ochre"
-                    }`}
-                  >
-                    {isSelected ? "✓" : null}
-                  </span>
-                  <span
-                    className={
-                      isSelected
-                        ? "font-semibold text-ink"
-                        : "text-ink-muted group-hover:text-ink"
-                    }
-                  >
-                    {range.label}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-
-        {/* Formular compact Min - Max */}
-        <form action="/catalog" method="GET" className="pt-1 space-y-2">
-          {activeSegment !== "all" && (
-            <input type="hidden" name="segment" value={activeSegment} />
-          )}
-          {activeQ && <input type="hidden" name="q" value={activeQ} />}
-          {activeCategory && (
-            <input type="hidden" name="category" value={activeCategory} />
-          )}
-          {activeCity && <input type="hidden" name="city" value={activeCity} />}
-          {activeSort !== "newest" && (
-            <input type="hidden" name="sort" value={activeSort} />
-          )}
-
-          <div className="flex items-center gap-1.5">
-            <input
-              name="minPrice"
-              type="number"
-              min={0}
-              defaultValue={activeMinPrice}
-              placeholder="Min"
-              aria-label="Preț minim RON pe zi"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-ochre focus:bg-white focus:outline-none"
-            />
-            <span className="text-xs text-ink-muted">-</span>
-            <input
-              name="maxPrice"
-              type="number"
-              min={0}
-              defaultValue={activeMaxPrice}
-              placeholder="Max"
-              aria-label="Preț maxim RON pe zi"
-              className="w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-muted focus:border-ochre focus:bg-white focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="shrink-0 rounded-lg bg-ochre hover:bg-ochre-hover text-white px-2.5 py-1.5 text-xs font-semibold transition-colors"
-            >
-              OK
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Secțiunea 3: Oraș / Locație (în stilul pill-urilor Color din imaginea de referință) */}
-      <div className="space-y-3 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xs font-bold uppercase tracking-wider text-ink">
-            Oraș / Locație
-          </h3>
-          <svg
-            className="w-3.5 h-3.5 text-ink-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {CITY_PILLS.map((cityItem) => {
-            const isSelected = activeCity === cityItem.name;
-            return (
-              <Link
-                key={cityItem.name}
-                href={buildFilterHref({
-                  city: isSelected ? "" : cityItem.name,
-                })}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  isSelected
-                    ? "bg-ochre text-white border-ochre shadow-sm"
-                    : "bg-white text-ink border-slate-200 hover:border-slate-300"
-                }`}
-              >
-                {isSelected ? (
-                  <span className="text-[11px] font-bold leading-none">✓</span>
-                ) : (
-                  <span
-                    className={`w-2.5 h-2.5 rounded-full ${cityItem.dotClass}`}
-                    aria-hidden="true"
-                  />
-                )}
-                <span>{cityItem.name}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Secțiunea 4: Rating (în stilul pill-urilor Rating din imaginea de referință) */}
-      <div className="space-y-3 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xs font-bold uppercase tracking-wider text-ink">
-            Rating
-          </h3>
-          <svg
-            className="w-3.5 h-3.5 text-ink-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {RATING_PILLS.map((pill, idx) => {
-            const isSelected =
-              pill.label === "Toate"
-                ? activeSort !== "rating_desc"
-                : activeSort === "rating_desc" && idx === 0;
-            return (
-              <Link
-                key={pill.label}
-                href={buildFilterHref({ sort: pill.sortValue })}
-                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
-                  isSelected
-                    ? "bg-ochre text-white border-ochre shadow-sm"
-                    : "bg-slate-50 text-ink border-slate-200 hover:border-ochre"
-                }`}
-              >
-                <span>{pill.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Secțiunea 5: Segment Proprietar (în stilul Shipping Options din imaginea de referință) */}
-      <div className="space-y-3 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-xs font-bold uppercase tracking-wider text-ink">
-            Segment Proprietar
-          </h3>
-          <svg
-            className="w-3.5 h-3.5 text-ink-muted"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 8.25l-7.5 7.5-7.5-7.5"
-            />
-          </svg>
-        </div>
-
-        <ul className="space-y-2">
-          {(
-            [
-              {
-                key: "all",
-                label: "Toate ofertele (P2P + Firme)",
-              },
-              {
-                key: "individual",
-                label: "Peer-to-Peer (Proprietari)",
-              },
-              {
-                key: "company",
-                label: "Firme de Închirieri (B2C)",
-              },
-            ] as const
-          ).map((option) => {
-            const isSelected = activeSegment === option.key;
-            return (
-              <li key={option.key}>
-                <Link
-                  href={buildFilterHref({ segment: option.key })}
-                  className="flex items-center gap-2.5 text-xs group"
-                >
-                  <span
-                    className={`w-4 h-4 shrink-0 rounded flex items-center justify-center border text-[10px] font-bold transition-colors ${
-                      isSelected
-                        ? "bg-ochre border-ochre text-white"
-                        : "border-slate-300 bg-white group-hover:border-ochre"
-                    }`}
-                  >
-                    {isSelected ? "✓" : null}
-                  </span>
-                  <span
-                    className={
-                      isSelected
-                        ? "font-semibold text-ink"
-                        : "text-ink-muted group-hover:text-ink"
-                    }
-                  >
-                    {option.label}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </aside>
+    </div>
   );
 }

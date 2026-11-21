@@ -337,6 +337,8 @@ export interface CatalogFilters {
   sort?: CatalogSortOption;
   page?: number;
   pageSize?: number;
+  /** Când e `true` (paginile 2+ la Infinite Scroll), sare peste `COUNT(*)` și `description` pentru viteză maximă. */
+  skipCount?: boolean;
 }
 
 /**
@@ -504,20 +506,87 @@ export interface ListingReportRecord {
   listing_status?: ListingStatus;
 }
 
+export interface AdminUserRow extends Profile {
+  role: UserRole;
+  listings_count: number;
+}
+
+export interface AdminListingRow {
+  id: string;
+  catalog_code: string;
+  title: string;
+  category: string;
+  city: string;
+  price_per_day: number;
+  deposit_ron: number;
+  status: ListingStatus;
+  rating_avg: number | null;
+  rating_count: number;
+  owner_id: string;
+  owner_name: string;
+  owner_type: AccountType;
+  created_at: string;
+}
+
+export interface AdminBookingRow {
+  id: string;
+  booking_code: string;
+  listing_id: string;
+  listing_title: string;
+  listing_code: string;
+  renter_name: string;
+  owner_name: string;
+  start_date: string;
+  end_date: string;
+  total_days: number;
+  total_price_ron: number;
+  platform_fee_ron: number;
+  status: BookingStatus;
+  payment_status: PaymentStatus | null;
+  deposit_status: DepositStatus | null;
+  created_at: string;
+}
+
+export interface AdminBreakdownItem {
+  label: string;
+  count: number;
+  percentage: number;
+}
+
 export interface AdminDashboardData {
   authorized: boolean;
   currentUserId: string | null;
   migrationMissing?: boolean;
   kpis: {
     totalUsers: number;
+    personalUsers: number;
+    businessUsers: number;
+    verifiedPhones: number;
+    verifiedBusinesses: number;
     totalListings: number;
     activeListings: number;
+    pausedListings: number;
+    archivedListings: number;
     totalBookings: number;
+    completedBookings: number;
+    activeBookings: number;
+    conversionRatePercent: number;
     openDisputes: number;
     openReports: number;
     totalCommissionRon: number;
     totalGmvRon: number;
+    escrowHeldRon: number;
+    averageBookingValueRon: number;
+    totalInvoices: number;
+    avgPlatformRating: number | null;
   };
+  users: AdminUserRow[];
+  allListings: AdminListingRow[];
+  allBookings: AdminBookingRow[];
+  invoices: InvoiceRecord[];
+  categoryBreakdown: AdminBreakdownItem[];
+  cityBreakdown: AdminBreakdownItem[];
+  bookingStatusBreakdown: AdminBreakdownItem[];
   disputes: (DisputeRecord & { booking_code?: string })[];
   companies: Profile[];
   reports: ListingReportRecord[];

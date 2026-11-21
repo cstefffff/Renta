@@ -47,9 +47,14 @@ export function BrandLogo({ showTag = true, iconOnly = false }: BrandLogoProps) 
 
       {!iconOnly && (
         <div className="flex items-center gap-2">
-          {/* Wordmark-ul oficial RentA */}
-          <span className="font-display text-lg font-extrabold tracking-tight text-ink">
-            Rent<span className="text-ochre">A</span>
+          {/* Wordmark-ul oficial RentA — dimensiune mărită și accente în culorile siglei */}
+          <span className="font-display text-2xl font-black tracking-tight leading-none text-ink flex items-baseline">
+            <span>Rent</span>
+            <span className="text-ochre">A</span>
+            <span
+              className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-ochre"
+              aria-hidden="true"
+            />
           </span>
 
           {/* Etichetă opțională discretă */}

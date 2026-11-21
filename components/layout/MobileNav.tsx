@@ -2,6 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import {
+  Bell,
+  Building2,
+  Calendar,
+  Database,
+  Heart,
+  LayoutGrid,
+  Menu,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  User,
+  X,
+} from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { FavoriteNavBadge } from "@/components/catalog/FavoriteNavBadge";
 
@@ -40,7 +54,25 @@ export function MobileNav({
         aria-label="Deschide meniul de navigare"
         className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-slate-200 bg-white text-xs font-semibold text-ink hover:bg-slate-50 transition-colors shadow-2xs"
       >
-        {open ? "✕ Închide" : "☰ Meniu"}
+        {open ? (
+          <>
+            <X
+              className="w-3.5 h-3.5 shrink-0"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span>Închide</span>
+          </>
+        ) : (
+          <>
+            <Menu
+              className="w-3.5 h-3.5 shrink-0"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span>Meniu</span>
+          </>
+        )}
       </button>
 
       {open && (
@@ -76,8 +108,26 @@ export function MobileNav({
                 </p>
                 <p className="text-xs text-ink-muted truncate">{userEmail}</p>
               </div>
-              <span className="shrink-0 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
-                {accountType === "company" ? "🏢 B2C" : "🤝 P2P"}
+              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
+                {accountType === "company" ? (
+                  <>
+                    <Building2
+                      className="w-3 h-3 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>B2C</span>
+                  </>
+                ) : (
+                  <>
+                    <User
+                      className="w-3 h-3 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>P2P</span>
+                  </>
+                )}
               </span>
             </div>
           )}
@@ -91,23 +141,38 @@ export function MobileNav({
               <Link
                 href="/catalog"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
               >
-                📦 Catalog Produse
+                <LayoutGrid
+                  className="w-4 h-4 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Catalog Produse</span>
               </Link>
               <Link
                 href="/catalog?segment=individual"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
               >
-                🤝 Segment P2P (Comunitate)
+                <User
+                  className="w-4 h-4 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Personal</span>
               </Link>
               <Link
                 href="/catalog?segment=company"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
               >
-                🏢 Segment Firme Verificate
+                <Building2
+                  className="w-4 h-4 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Business</span>
               </Link>
             </nav>
           </div>
@@ -121,16 +186,28 @@ export function MobileNav({
               <Link
                 href="/rezervarile-mele"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
               >
-                📅 Rezervările mele
+                <Calendar
+                  className="w-4 h-4 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Rezervările mele</span>
               </Link>
               <Link
                 href="/favorite"
                 onClick={() => setOpen(false)}
                 className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-rose-50 hover:text-rose-600 text-ink transition-colors flex items-center justify-between"
               >
-                <span>❤️ Favorite &amp; Salvate</span>
+                <span className="inline-flex items-center gap-2.5">
+                  <Heart
+                    className="w-4 h-4 text-rose-500 shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>Favorite &amp; Salvate</span>
+                </span>
                 <FavoriteNavBadge />
               </Link>
             </nav>
@@ -145,16 +222,26 @@ export function MobileNav({
               <Link
                 href="/listarile-mele"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 hover:bg-ochre-light hover:text-ochre text-ink transition-colors"
               >
-                🏷️ Inventarul meu
+                <ShoppingBag
+                  className="w-4 h-4 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Inventarul meu</span>
               </Link>
               <Link
                 href="/listarile-mele/nou"
                 onClick={() => setOpen(false)}
-                className="px-3.5 py-2 rounded-xl bg-ochre-light/70 hover:bg-ochre-light text-ochre font-semibold transition-colors"
+                className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-ochre-light/70 hover:bg-ochre-light text-ochre font-semibold transition-colors"
               >
-                + Adaugă obiect nou
+                <Plus
+                  className="w-4 h-4 text-ochre shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Adaugă obiect nou</span>
               </Link>
             </nav>
           </div>
@@ -168,44 +255,51 @@ export function MobileNav({
                   onClick={() => setOpen(false)}
                   className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-ink font-semibold transition-colors flex items-center justify-center gap-2"
                 >
-                  <svg
+                  <Bell
                     className="w-4 h-4 text-ink-muted shrink-0"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                    strokeWidth={1.8}
                     aria-hidden="true"
-                  >
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                  </svg>
+                  />
                   <span>Notificări</span>
                 </Link>
                 <Link
                   href="/profil"
                   onClick={() => setOpen(false)}
-                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-ink text-center font-semibold transition-colors"
+                  className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/70 text-ink font-semibold transition-colors flex items-center justify-center gap-2"
                 >
-                  👤 Profil &amp; setări
+                  <User
+                    className="w-4 h-4 text-ink-muted shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>Profil &amp; setări</span>
                 </Link>
                 {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={() => setOpen(false)}
-                    className="p-2.5 rounded-xl bg-ochre-light/70 hover:bg-ochre-light text-ochre text-center font-semibold transition-colors"
+                    className="p-2.5 rounded-xl bg-ochre-light/70 hover:bg-ochre-light text-ochre font-semibold transition-colors flex items-center justify-center gap-2"
                   >
-                    🛡️ Panou Admin
+                    <ShieldCheck
+                      className="w-4 h-4 text-ochre shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Panou Admin</span>
                   </Link>
                 )}
                 {showStatusDb && (
                   <Link
                     href="/status-db"
                     onClick={() => setOpen(false)}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-ink-muted text-center font-mono transition-colors"
+                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 text-ink-muted font-mono transition-colors flex items-center justify-center gap-2"
                   >
-                    ⚙️ Diagnostic DB (/status-db)
+                    <Database
+                      className="w-4 h-4 text-ink-muted shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Diagnostic DB (/status-db)</span>
                   </Link>
                 )}
                 <form action={signOutAction}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Flag } from "lucide-react";
 import { reportListingAction } from "@/app/actions/admin";
 
 /**
@@ -103,7 +104,11 @@ export function ReportListingButton({
           }}
           className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted hover:text-rose-600 transition-colors"
         >
-          <span aria-hidden="true">🚩</span>
+          <Flag
+            className="w-3.5 h-3.5 shrink-0"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
           <span>{open ? "Anulează raportarea" : "Raportează anunț"}</span>
         </button>
 

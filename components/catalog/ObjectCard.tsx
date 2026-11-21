@@ -1,6 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
-import { getCategoryLabel, getCategoryCode } from "@/lib/constants/categories";
+import {
+  BadgeCheck,
+  Building2,
+  Camera,
+  Image as ImageIcon,
+  MapPin,
+  Star,
+} from "lucide-react";
+import { getCategoryLabel } from "@/lib/constants/categories";
 import { FavoriteButton } from "@/components/catalog/FavoriteButton";
 import type { ListingWithDetails } from "@/lib/types/database";
 
@@ -27,6 +35,18 @@ function isOptimizableHost(url: string): boolean {
   }
 }
 
+/**
+ * Redimensionează automat imaginile Unsplash la `w=600&q=75` pentru thumbnail-urile
+ * din grila de catalog (~70% mai puțini KB descărcați la scroll, păstrând rezoluția
+ * completă `w=1200` pe pagina de detaliu `/obiect/[id]`).
+ */
+function toCardThumbnailUrl(url: string): string {
+  if (!url.includes("images.unsplash.com")) {
+    return url;
+  }
+  return url.replace("w=1200", "w=600").replace("q=80", "q=75");
+}
+
 export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
   const isCompany = listing.owner?.account_type === "company";
   const catalogCode =
@@ -35,7 +55,8 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
   const sortedImages = [...(listing.images || [])].sort(
     (a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)
   );
-  const coverImage = sortedImages[0]?.url || null;
+  const rawCoverImage = sortedImages[0]?.url || null;
+  const coverImage = rawCoverImage ? toCardThumbnailUrl(rawCoverImage) : null;
   const ownerName =
     listing.owner?.display_name ||
     (isCompany ? "Firmă Parteneră" : "Proprietar P2P");
@@ -59,6 +80,7 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
                 src={coverImage}
                 alt={listing.title}
                 fill
+                unoptimized={coverImage.includes("unsplash.com")}
                 sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                 className="object-cover group-hover:scale-105 transition-transform duration-300"
               />
@@ -72,20 +94,11 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
             )
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-ink-muted bg-slate-100">
-              <svg
+              <ImageIcon
                 className="w-10 h-10 text-slate-300 mb-2"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={1.5}
+                strokeWidth={1.8}
                 aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-                />
-              </svg>
+              />
               <span className="font-mono text-[11px] font-medium text-slate-500">
                 {catalogCode}
               </span>
@@ -95,55 +108,43 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
             </div>
           )}
 
-          {/* Colțul stânga-sus: Pill discret cu segmentul (Firmă Verificată / Firmă B2C / P2P) + codul de catalog */}
-          <span
-            className={`absolute top-2.5 left-2.5 backdrop-blur-sm text-[11px] font-medium px-2.5 py-1 rounded-full shadow-sm inline-flex items-center gap-1.5 ${
-              isCompany && listing.owner?.kyb_verified
-                ? "bg-emerald-50/95 text-emerald-900 ring-1 ring-emerald-200/80"
-                : "bg-white/90 text-ink"
-            }`}
-          >
+          {/* Colțul stânga-sus: Badge discret DOAR pentru firme (pentru P2P lăsăm fotografia curată) */}
+          {isCompany && (
             <span
-              className={
-                isCompany && listing.owner?.kyb_verified
-                  ? "font-semibold text-emerald-800"
-                  : ""
-              }
+              className={`absolute top-2.5 left-2.5 backdrop-blur-sm text-[11px] font-semibold px-2.5 py-1 rounded-full shadow-sm inline-flex items-center gap-1 ${
+                listing.owner?.kyb_verified
+                  ? "bg-white/95 text-ochre ring-1 ring-ochre/20"
+                  : "bg-white/95 text-ink"
+              }`}
             >
-              {isCompany
-                ? listing.owner?.kyb_verified
-                  ? "🏢 Firmă Verificată ✓"
-                  : "🏢 Firmă B2C"
-                : "🤝 P2P"}
+              <Building2
+                className="w-3 h-3 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>
+                {listing.owner?.kyb_verified
+                  ? "Business verificat"
+                  : "Business"}
+              </span>
+              {listing.owner?.kyb_verified && (
+                <BadgeCheck
+                  className="w-3.5 h-3.5 shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+              )}
             </span>
-            <span className="text-slate-300">&bull;</span>
-            <span className="font-mono text-[10px] text-ink-muted">
-              {catalogCode}
-            </span>
-          </span>
-
-          {/* Colțul stânga-jos: Etichetă categorie discretă */}
-          <span className="absolute bottom-2.5 left-2.5 bg-slate-900/75 backdrop-blur-sm text-white text-[10px] font-medium px-2.5 py-0.5 rounded-md">
-            {getCategoryCode(listing.category)} &bull;{" "}
-            {getCategoryLabel(listing.category)}
-          </span>
+          )}
 
           {/* Colțul dreapta-jos: Indicator număr fotografii dacă anunțul are galerie (> 1 poză) */}
           {sortedImages.length > 1 && (
             <span className="absolute bottom-2.5 right-2.5 bg-slate-900/75 backdrop-blur-sm text-white text-[10px] font-medium px-2 py-0.5 rounded-md inline-flex items-center gap-1">
-              <svg
+              <Camera
                 className="w-3 h-3 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={1.8}
                 aria-hidden="true"
-              >
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                <circle cx="12" cy="13" r="4" />
-              </svg>
+              />
               <span>{sortedImages.length}</span>
             </span>
           )}
@@ -167,46 +168,42 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
           />
         </div>
 
-        {/* 3. Rândul de Rating (Stele Galbene + Recenzii) */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-amber-400 text-xs tracking-tight" aria-hidden="true">
-            ★★★★★
-          </span>
+        {/* 3. Rândul de Rating Onest (Scor real când există recenzii, altfel etichetă „Nou” + Categorie) */}
+        <div className="flex items-center gap-1.5 min-h-[20px]">
           {hasRating ? (
-            <span className="text-[11px] font-medium text-ink">
-              {Number(listing.rating_avg).toFixed(1)}{" "}
-              <span className="text-ink-muted font-normal">
-                ({listing.rating_count} recenzii)
+            <>
+              <Star
+                className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span className="text-[11px] font-semibold text-ink">
+                {Number(listing.rating_avg).toFixed(1)}{" "}
+                <span className="text-ink-muted font-normal">
+                  ({listing.rating_count}{" "}
+                  {listing.rating_count === 1 ? "recenzie" : "recenzii"})
+                </span>
               </span>
-            </span>
+            </>
           ) : (
-            <span className="text-[11px] text-ink-muted truncate">
-              Verificat &middot; {getCategoryLabel(listing.category)}
-            </span>
+            <>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-ochre-light/70 text-ochre text-[10px] font-semibold">
+                Nou
+              </span>
+              <span className="text-[11px] text-ink-muted truncate">
+                {getCategoryLabel(listing.category)}
+              </span>
+            </>
           )}
         </div>
 
         {/* 4. Rândul de Locație + Proprietar */}
         <div className="text-xs text-ink-muted flex items-center gap-1.5 mt-1 mb-3">
-          <svg
+          <MapPin
             className="w-3.5 h-3.5 text-ochre shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+            strokeWidth={1.8}
             aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"
-            />
-          </svg>
+          />
           <span className="font-medium text-ink">{listing.city}</span>
           <span className="text-slate-300">&bull;</span>
           <span className="truncate" title={ownerName}>
@@ -237,27 +234,13 @@ export function ObjectCard({ listing }: { listing: ListingWithDetails }) {
         </div>
       </div>
 
-      {/* 6. Footer Card — Butonul Verde-Teal pe toată lățimea */}
+      {/* 6. Footer Card — Buton rafinat care se aprinde în verde-smarald la hover pe card */}
       <footer className="pt-3">
         <Link
           href={`/obiect/${listing.id}`}
-          className="w-full inline-flex items-center justify-center gap-2 bg-ochre hover:bg-ochre-hover text-white text-xs font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm"
+          className="w-full inline-flex items-center justify-center gap-2 bg-ochre-light/70 text-ochre border border-ochre/20 group-hover:bg-ochre group-hover:text-white group-hover:border-ochre text-xs font-semibold py-2.5 px-4 rounded-xl transition-all"
         >
-          <svg
-            className="w-4 h-4 shrink-0"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M15.75 10.5V6a3.75 3.75 0 10-7.5 0v4.5m11.356-1.993l1.263 12c.07.665-.45 1.243-1.119 1.243H4.25a1.125 1.125 0 01-1.12-1.243l1.264-12A1.125 1.125 0 015.513 7.5h12.974c.576 0 1.059.435 1.119 1.007zM8.625 10.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm7.5 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"
-            />
-          </svg>
-          <span>Închiriază acum</span>
+          <span>Vezi detalii &amp; rezervă</span>
         </Link>
       </footer>
     </article>

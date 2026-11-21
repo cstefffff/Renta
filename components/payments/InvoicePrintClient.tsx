@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Check, Download, Printer } from "lucide-react";
 import type { EFacturaStatus, InvoiceRecord } from "@/lib/types/database";
 
 interface InvoicePrintClientProps {
@@ -113,17 +114,19 @@ export function InvoicePrintClient({
           <button
             type="button"
             onClick={handleDownloadXml}
-            className="catalog-btn-secondary text-xs"
+            className="catalog-btn-secondary inline-flex items-center gap-1.5 text-xs"
           >
-            ⬇️ Descarcă XML RO e-Factura
+            <Download className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>Descarcă XML RO e-Factura</span>
           </button>
 
           <button
             type="button"
             onClick={handlePrintPdf}
-            className="catalog-btn-primary text-xs"
+            className="catalog-btn-primary inline-flex items-center gap-1.5 text-xs"
           >
-            🖨️ Tipărește / Salvează PDF
+            <Printer className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>Tipărește / Salvează PDF</span>
           </button>
         </div>
       </div>
@@ -291,9 +294,12 @@ export function InvoicePrintClient({
                 {invoice.currency || "RON"}
               </span>
             </div>
-            <div className="text-[11px] text-emerald-700 font-medium pt-1">
-              ✓ Achitat prin reținere automată din Escrow la finalizarea
-              închirierii.
+            <div className="flex items-start gap-1.5 text-[11px] text-emerald-700 font-medium pt-1">
+              <Check className="w-3.5 h-3.5 shrink-0 mt-0.5" strokeWidth={1.8} aria-hidden="true" />
+              <span>
+                Achitat prin reținere automată din Escrow la finalizarea
+                închirierii.
+              </span>
             </div>
           </div>
         </section>
@@ -322,9 +328,10 @@ export function InvoicePrintClient({
             <button
               type="button"
               onClick={handleDownloadXml}
-              className="catalog-btn-secondary text-xs"
+              className="catalog-btn-secondary inline-flex items-center gap-1.5 text-xs"
             >
-              ⬇️ Descarcă .xml
+              <Download className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>Descarcă .xml</span>
             </button>
           </div>
           <pre className="overflow-x-auto rounded-xl bg-slate-900 text-slate-100 p-4 text-[11px] font-mono leading-relaxed max-h-96">

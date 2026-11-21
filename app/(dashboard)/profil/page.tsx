@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CreditCard, Star } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getMyFullProfile, signOutAction } from "@/app/actions/auth";
 import { ProfileForm, type ProfileData } from "@/components/profile/ProfileForm";
@@ -118,9 +119,16 @@ export default async function ProfilPage() {
                   : "SEGMENT A: PERSOANĂ FIZICĂ (P2P)"}
               </span>
               {profileData.rating_count && profileData.rating_count > 0 ? (
-                <span className="px-2 py-0.5 bg-ochre-light border border-ochre text-ink font-bold">
-                  ★ {Number(profileData.rating_avg ?? 0).toFixed(1)} (
-                  {profileData.rating_count} evaluări)
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-ochre-light border border-ochre text-ink font-bold">
+                  <Star
+                    className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>
+                    {Number(profileData.rating_avg ?? 0).toFixed(1)} (
+                    {profileData.rating_count} evaluări)
+                  </span>
                 </span>
               ) : null}
             </div>
@@ -157,24 +165,12 @@ export default async function ProfilPage() {
       <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-ochre-light text-ochre flex items-center justify-center shrink-0">
-            <svg
-              className="w-6 h-6"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
+            <CreditCard className="w-6 h-6" strokeWidth={1.8} aria-hidden="true" />
           </div>
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="font-display text-lg font-bold text-ink">
-                💳 Plăți, Încasări &amp; Stripe Connect
+                Plăți, Încasări &amp; Stripe Connect
               </h2>
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
                 Escrow &amp; Garanții

@@ -920,15 +920,21 @@ export async function getPaginatedPublicListingsAction(
     ? `owner:profiles!listings_owner_id_fkey!inner(${PUBLIC_OWNER_SELECT})`
     : `owner:profiles!listings_owner_id_fkey(${PUBLIC_OWNER_SELECT})`;
 
+  // Pe paginile 2+ (skipCount === true), selectăm doar coloanele afișate pe ObjectCard
+  // (fără `description`) și nu mai forțăm PostgreSQL să ruleze `COUNT(*)` la fiecare scroll.
+  const listingColumns = filters.skipCount
+    ? "id, catalog_code, owner_id, title, category, price_per_day, price_per_hour, deposit_ron, min_rental_days, cancellation_policy, rating_avg, rating_count, city, status, created_at, updated_at"
+    : "*";
+
   let query = supabase
     .from("listings")
     .select(
       `
-      *,
-      images:listing_images(*),
+      ${listingColumns},
+      images:listing_images(id, listing_id, storage_path, url, display_order),
       ${ownerRelation}
     `,
-      { count: "exact" }
+      filters.skipCount ? {} : { count: "exact" }
     )
     .eq("status", "available");
 

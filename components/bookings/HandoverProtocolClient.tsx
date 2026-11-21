@@ -3,6 +3,14 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  PackageCheck,
+  Printer,
+  RotateCcw,
+} from "lucide-react";
 import { uploadHandoverProofAction } from "@/app/actions/trust";
 import type {
   BookingWithDetails,
@@ -126,16 +134,18 @@ export function HandoverProtocolClient({
         <div className="flex flex-wrap items-center gap-2.5">
           <Link
             href={`/rezervarile-mele/${booking.id}/disputa`}
-            className="catalog-btn-secondary text-xs"
+            className="catalog-btn-secondary inline-flex items-center gap-1.5 text-xs"
           >
-            ⚠️ Raportează o Problemă / Dispută
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>Raportează o Problemă / Dispută</span>
           </Link>
           <button
             type="button"
             onClick={() => window.print()}
-            className="catalog-btn-primary text-xs sm:text-sm"
+            className="catalog-btn-primary inline-flex items-center gap-1.5 text-xs sm:text-sm"
           >
-            🖨️ Tipărește / Salvează PDF
+            <Printer className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>Tipărește / Salvează PDF</span>
           </button>
         </div>
       </div>
@@ -201,8 +211,9 @@ export function HandoverProtocolClient({
                   : "Persoană Fizică (P2P)"}
               </strong>
               {booking.owner?.kyb_verified && (
-                <span className="ml-1.5 text-emerald-700 font-semibold">
-                  ✓ Verificat ANAF
+                <span className="inline-flex items-center gap-1 ml-1.5 text-emerald-700 font-semibold">
+                  <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Verificat ANAF</span>
                 </span>
               )}
             </div>
@@ -237,8 +248,9 @@ export function HandoverProtocolClient({
                   : "Persoană Fizică (P2P)"}
               </strong>
               {booking.renter?.phone_verified && (
-                <span className="ml-1.5 text-emerald-700 font-semibold">
-                  ✓ Telefon Verificat
+                <span className="inline-flex items-center gap-1 ml-1.5 text-emerald-700 font-semibold">
+                  <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Telefon Verificat</span>
                 </span>
               )}
             </div>
@@ -396,8 +408,9 @@ export function HandoverProtocolClient({
                   : "border-slate-200 bg-slate-50 hover:border-slate-300"
               }`}
             >
-              <div className="font-semibold text-sm text-ink">
-                📦 Check-in — Predare Obiect
+              <div className="flex items-center gap-1.5 font-semibold text-sm text-ink">
+                <PackageCheck className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>Check-in — Predare Obiect</span>
               </div>
               <p className="text-xs text-ink-muted mt-0.5">
                 Fotografii făcute la începutul închirierii (starea inițială +
@@ -414,8 +427,9 @@ export function HandoverProtocolClient({
                   : "border-slate-200 bg-slate-50 hover:border-slate-300"
               }`}
             >
-              <div className="font-semibold text-sm text-ink">
-                🔄 Check-out — Returnare Obiect
+              <div className="flex items-center gap-1.5 font-semibold text-sm text-ink">
+                <RotateCcw className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>Check-out — Returnare Obiect</span>
               </div>
               <p className="text-xs text-ink-muted mt-0.5">
                 Fotografii făcute la predarea înapoi către ofertant.
@@ -503,8 +517,9 @@ export function HandoverProtocolClient({
         {/* Galerie Check-in */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-display text-base font-bold text-ink">
-              📦 Dovezi Foto Check-in (Predare)
+            <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+              <Camera className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>Dovezi Foto Check-in (Predare)</span>
             </h3>
             <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-ochre-light text-ochre font-bold">
               {checkinProofs.length} poze
@@ -558,8 +573,9 @@ export function HandoverProtocolClient({
         {/* Galerie Check-out */}
         <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-display text-base font-bold text-ink">
-              🔄 Dovezi Foto Check-out (Returnare)
+            <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+              <RotateCcw className="w-4 h-4 text-ink-muted shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>Dovezi Foto Check-out (Returnare)</span>
             </h3>
             <span className="font-mono text-xs px-2 py-0.5 rounded-full bg-slate-100 text-ink font-bold">
               {checkoutProofs.length} poze

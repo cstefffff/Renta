@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { Building2, Heart, User, X } from "lucide-react";
 import { useFavorites } from "@/lib/favorites/useFavorites";
 import { getListingsByIdsAction } from "@/app/actions/listings";
 import { ObjectCard } from "@/components/catalog/ObjectCard";
@@ -99,7 +100,11 @@ export default function FavoritesPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 border border-rose-200/80 text-rose-600 font-mono text-xs font-semibold">
-              <span aria-hidden="true">♥</span>
+              <Heart
+                className="w-3.5 h-3.5 fill-rose-500 text-rose-500 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span>COLECȚIA TA // FAVORITE</span>
             </div>
 
@@ -128,7 +133,11 @@ export default function FavoritesPage() {
                 onClick={clearFavorites}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rose-200 bg-white hover:bg-rose-50 text-xs font-semibold text-rose-600 transition-colors cursor-pointer"
               >
-                <span aria-hidden="true">✕</span>
+                <X
+                  className="w-3.5 h-3.5 shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
                 <span>Golire listă</span>
               </button>
             )}
@@ -161,25 +170,35 @@ export default function FavoritesPage() {
               <button
                 type="button"
                 onClick={() => setSegmentFilter("individual")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                   segmentFilter === "individual"
                     ? "bg-ochre text-white shadow-2xs"
                     : "bg-slate-100 hover:bg-slate-200/80 text-ink"
                 }`}
               >
-                🤝 Peer-to-Peer (P2P) ({p2pCount})
+                <User
+                  className="w-3.5 h-3.5 shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Personal ({p2pCount})</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setSegmentFilter("company")}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors cursor-pointer ${
                   segmentFilter === "company"
                     ? "bg-ochre text-white shadow-2xs"
                     : "bg-slate-100 hover:bg-slate-200/80 text-ink"
                 }`}
               >
-                🏢 Firme de Închirieri ({companyCount})
+                <Building2
+                  className="w-3.5 h-3.5 shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Business ({companyCount})</span>
               </button>
             </div>
 
@@ -211,20 +230,11 @@ export default function FavoritesPage() {
       ) : count === 0 || activeFavoriteListings.length === 0 ? (
         <section className="bg-white border border-slate-200/90 rounded-2xl p-10 sm:p-14 text-center shadow-sm max-w-2xl mx-auto space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-rose-50 border border-rose-200/70 text-rose-500 mx-auto flex items-center justify-center">
-            <svg
+            <Heart
               className="w-7 h-7"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
               strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-              />
-            </svg>
+            />
           </div>
 
           <h2 className="font-display text-xl sm:text-2xl font-bold text-ink">
@@ -233,7 +243,12 @@ export default function FavoritesPage() {
 
           <p className="text-sm text-ink-muted max-w-md mx-auto leading-relaxed">
             Când navighezi prin catalog sau pe pagina unui produs, apasă pe
-            butonul cu inimioară <span className="text-rose-500 font-bold">♥</span>{" "}
+            butonul cu inimioară{" "}
+            <Heart
+              className="inline-block w-3.5 h-3.5 fill-rose-500 text-rose-500 align-text-bottom mx-0.5"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />{" "}
             pentru a salva anunțurile preferate aici și a le regăsi oricând.
           </p>
 
@@ -249,7 +264,12 @@ export default function FavoritesPage() {
               href="/catalog?segment=company"
               className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200/80 text-ink text-xs font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
-              <span>🏢 Vezi Firme de Închirieri</span>
+              <Building2
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>Vezi Firme de Închirieri</span>
             </Link>
           </div>
         </section>

@@ -4,6 +4,84 @@ Toate modificările notabile, deciziile arhitecturale și validările QA ale pla
 
 ---
 
+## [v1.2.1-instant-endless-scroll-prefetch] — 2026-11-22
+### Optimizat (Endless Scroll „0 ms” cu Single-Slot Lookahead Prefetch & Proiecție SQL Ușoară)
+- **Single-Slot Lookahead Buffer & `rootMargin: "1200px"` (`components/catalog/EndlessCatalogGrid.tsx`)**:
+  - Implementat pattern-ul `CompletableFuture` cu un singur slot (`prefetchRef` + `generationRef` anti-race-condition): imediat ce pagina `N` este afișată, pagina `N + 1` este pre-încărcată silențios în RAM în fundal.
+  - Pragul `IntersectionObserver` a fost extins de la `320px` la **`1200px`** (~3 rânduri de carduri înainte de final). Când utilizatorul dă scroll, lotul următor este deja în memorie și se lipește sincron în DOM în **0 ms** (fără afișarea spinner-ului). Dacă utilizatorul dă scroll extrem de rapid, se alătură promisiunii deja aflate în zbor (0 cereri duplicate).
+- **Fast-Path SQL fără `COUNT(*)` și fără `description` pe paginile 2+ (`app/actions/listings.ts`, `lib/types/database.ts`)**:
+  - Adăugat flag-ul `skipCount?: boolean` în `CatalogFilters`: pe paginile `2+` la scroll, PostgreSQL nu mai recalculează `{ count: "exact" }` și nu mai transferă coloana `description`, reducând timpul de interogare și dimensiunea răspunsului cu >50%.
+- **Thumbnail-uri Optimizate `w=600&q=75` pe Carduri (`components/catalog/ObjectCard.tsx`)**:
+  - Funcția `toCardThumbnailUrl()` redimensionează automat imaginile Unsplash la `600px` pentru cardurile din grilă (~70% mai puțini KB descărcați la scroll), păstrând rezoluția completă `1200px` pe pagina de detaliu `/obiect/[id]`.
+
+---
+
+## [v1.2.0-virtual-stress-test-100-listings] — 2026-11-22
+### Adăugat & Validat (Populare Masivă de Test — 50 Utilizatori Virtuali & 100 Anunțuri Fictive)
+- **Script Autonom de Populare Date (`scripts/seed-virtual-data.mjs`)** (`renta-backend`):
+  - **50 de conturi virtuale** (32 Personal + 18 Business) înregistrate în Supabase Auth cu trigger automat `handle_new_user()` în `public.profiles` și parola universală de testare `DemoRentA2026!`, acoperind 8 orașe mari (București, Cluj-Napoca, Timișoara, Iași, Brașov, Constanța, Sibiu, Oradea).
+  - **100 de anunțuri noi (`#OBJ-0025` – `#OBJ-0124`)** cu descrieri detaliate în limba română, garanții reale, politici de anulare și prețuri zilnice cuprinse între 20 RON și 350 RON.
+  - **200+ imagini foto** de înaltă rezoluție inserate în `public.listing_images` (câte 2-3 fotografii per obiect, compatibile Unsplash `remotePatterns`).
+- **Validare Performanță & Capacitate Platformă** (`renta-qa-tracker`):
+  - **Catalog Global**: **123 anunțuri active** distribuite pe toate cele 8 categorii oficiale (`sport-timp-liber`: 14, `foto-video`: 19, `electronice`: 16, `scule-unelte`: 19, `altele`: 12, `camping-outdoor`: 16, `vestimentar`: 11, `evenimente-party`: 16).
+  - **Timp de Răspuns Interogare**: **~233 ms** pentru încărcarea primelor 12 anunțuri cu profiluri de proprietar și 24 de imagini asociate.
+  - **Scroll Infinit (OLX Style)**: testat și funcțional pe feed-ul de 123 anunțuri fără blocaje în memorie sau layout shift.
+  - **Panou Admin (`/admin`)**: afișează în timp real 123 de anunțuri, 60+ utilizatori și diagramele de distribuție complet populate.
+- **Verificare QA & Fix Localhost `next/image` (`next.config.ts`, `components/catalog/ObjectCard.tsx`)**:
+  - Adăugat `images.unsplash.com` și `plus.unsplash.com` în `images.remotePatterns` din `next.config.ts` și `unoptimized={coverImage.includes("unsplash.com")}` pe `<Image>` în `ObjectCard.tsx` (eliminând eroarea HTTP 500 `Invalid src prop on next/image` pe `/` și `/catalog`).
+  - Auditate automat prin `HEAD` request toate cele 106 URL-uri foto distincte din `public.listing_images` și înlocuite 5 linkuri Unsplash expirate (404) cu fotografii valide (100% `200 OK` pe toate cele 243 de imagini).
+  - Repornit serverul `localhost:3000` și rulat Smoke Test pe rutele `/`, `/catalog`, `/catalog?segment=individual`, `/catalog?segment=company`, `/favorite`, `/admin`, `/inregistrare` și `/api/health` (toate `200 OK`).
+  - `npx.cmd tsc --noEmit`: 0 erori (`exit code 0`).
+  - `npm.cmd run test`: 24 / 24 teste PASS (`exit code 0`).
+
+---
+
+## [v1.1.0-super-admin-command-center] — 2026-11-21
+### Adăugat (Super-Admin Command Center `/admin` — Metrici, Control Global & Export CSV)
+- **Backend & SQL Super-Admin (`supabase/migrations/009_admin_super_controls.sql`, `lib/types/database.ts`, `app/actions/admin.ts`)** (`renta-backend`):
+  - Politică RLS `profile_private_select_admin` pentru citirea rolurilor (`user`/`moderator`/`admin`) de către administratori.
+  - 3 RPC-uri noi `SECURITY DEFINER` cu jurnalizare atomică în `admin_audit_logs`: `admin_set_user_role` (cu protecție anti auto-retrogradare), `admin_force_booking_status` (override controlat State Machine prin `renta.trusted_admin_override = 'on'`) și `admin_send_system_notification`.
+  - Extindere `getAdminDashboardDataAction()` cu 13 KPI-uri suplimentare (GMV, Comisioane 10%, Fonduri Escrow, AOV, Rată conversie rezervări, Rating mediu global), distribuții pe Categorii/Orașe/Status și listele complete de utilizatori, anunțuri, rezervări și facturi SRL.
+- **Interfață Super-Admin 6 Tab-uri (`components/admin/AdminDashboardClient.tsx`)** (`renta-frontend`):
+  - **100% fără emoji-uri** (exclusiv iconițe vectoriale `lucide-react`): `Overview & Metrici` (8 carduri KPI + 3 diagrame de distribuție), `Utilizatori` (roluri, KYB, notificări directe, Export CSV), `Anunțuri` (control global Activează/Pauză/Arhivează, Export CSV), `Rezervări & Facturi` (intervenție admin + listă facturi SRL cu link PDF, Export CSV), `Dispute & Rapoarte` și `Audit Log` filtrabil.
+
+---
+
+## [v1.0.3-premium-lucide-icons-and-horizontal-filters] — 2026-11-21
+### Rafinat (Design Premium Zero-Emoji & Filtre Orizontale Catalog)
+- **Eliminare 100% Emoji -> Iconițe Vectoriale `lucide-react` (21 fișiere UI)** (`renta-frontend`):
+  - Înlocuite toate emoji-urile și simbolurile Unicode decorative din Homepage, Catalog, Favorite, Detaliu Obiect, Header, MobileNav, UserMenu, Profil, Plăți, Rezervări, Dispute, Proces-Verbal și Panou Admin cu iconițe monocrome crisp `lucide-react` (`strokeWidth={1.8}`, `aria-hidden="true"`).
+- **Bară Orizontală de Filtre cu Dropdown-uri „Pill” (`components/catalog/FilterBar.tsx`, `app/catalog/page.tsx`)** (`renta-frontend`):
+  - Eliminat dublul sidebar din `/catalog` — filtrele (`Categorie`, `Oraș`, `Preț / zi`, `Personal / Business`, `Ordonează`) stau acum pe un singur rând compact sus, eliberând 100% din lățime pentru carduri.
+  - Uniformizat etichetele de segment la **`Personal`** și **`Business`** în toată aplicația și reparat centrarea etichetelor din `SidebarRail.tsx`.
+
+---
+
+## [v1.0.2-endless-scroll-and-brand-header] — 2026-11-21
+### Adăugat & Rafinat (Feed Endless Infinite Scroll gen OLX & Header Brand Curat)
+- **Feed Endless / Infinite Scroll (`components/catalog/EndlessCatalogGrid.tsx`, `app/page.tsx`, `app/catalog/page.tsx`)** (`renta-frontend`):
+  - Primele **12 anunțuri** se încarcă pe server (SSR), iar următoarele pachete de câte 12 se încarcă automat la scroll prin `IntersectionObserver` (`rootMargin: "320px"`), cu bară discretă de progres `Afișate X din Y anunțuri`, buton fallback și `↑ Înapoi sus` la final.
+  - Pe Homepage, mini-banda „Cum funcționează în 3 pași” a fost mutată deasupra feed-ului continuu, iar pe `/catalog` paginarea clasică a fost înlocuită cu scroll infinit sincronizat cu filtrele URL.
+- **Identitate Brand & Header Curat (`components/ui/BrandLogo.tsx`, `components/layout/Header.tsx`)**:
+  - Eliminat butonul duplicat `Favorite` din header-ul de sus și înlocuit breadcrumb-ul `RentA Store › Catalog & Închirieri` cu sigla geometrică hexagon + wordmark-ul mărit **`RentA.`** (`text-2xl font-black`).
+
+---
+
+## [v1.0.1-homepage-ux-refinement] — 2026-11-21
+### Rafinat (Design & Learning Curve — Homepage, Carduri & SidebarRail)
+- **Homepage Compact & 100% Limbaj Natural (`app/page.tsx`)** (`renta-frontend`):
+  - Hero compact (`p-5 sm:p-7`) fără jargon tehnic (`#CAT-2025-RO`, `Storefront`, `P2P`/`B2C`, `Showing`/`All`) și fără linkuri duplicate; bară de căutare pe un singur rând pe desktop.
+  - Bară orizontală de categorii pe un singur rând (`overflow-x-auto`) cu iconițe intuitive.
+  - Afișare limitată la primele **8 echipamente** pe Homepage + buton `Vezi toate cele N de obiecte în Catalog →`, urmate de secțiunea **„Cum funcționează RentA în 3 pași simpli”** și bannerul CTA pentru ofertanți.
+- **Carduri Curate & Rating Onest (`components/catalog/ObjectCard.tsx`)** (`renta-frontend`):
+  - Fotografie aerisită (fără `#OBJ-XXXX` și fără `#CAT-01` suprapuse; badge pe poză doar pentru firme `🏢 Firmă verificată ✓` + `📷 N` pentru multi-foto).
+  - Eliminarea celor 5 stele galbene pline la anunțurile cu 0 recenzii (afișează badge discret `Nou` + categoria; stelele apar doar la rating real).
+  - Buton CTA rafinat (`bg-ochre-light/70 text-ochre` care devine verde-smarald plin la hover pe card).
+- **Navigație Laterală cu Etichete (`components/layout/SidebarRail.tsx`)** (`renta-frontend`):
+  - Lățit la `w-20` cu etichete scurte sub fiecare iconiță (`Listează`, `Acasă`, `Catalog`, `Favorite`, `Inventar`, `Rezervări`, `Profil`) și eliminate cele 2 iconițe duplicate P2P/Firme.
+
+---
+
 ## [v1.0.0-commercial-wave1-complete] — 2026-11-21
 ### Adăugat (Faza 16: Testare Automată Vitest + CI, Observabilitate & Checklist Go-Live `.ro` — `M16.1`–`M16.3` — 100% Roadmap Uz Comercial Valul 1 Finalizat!)
 - **Suite de Teste Automate Vitest & Configurare (`M16.1`)** (`renta-qa-tracker`):

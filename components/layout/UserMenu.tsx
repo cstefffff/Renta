@@ -3,6 +3,20 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Bell,
+  Building2,
+  Calendar,
+  CreditCard,
+  Database,
+  Heart,
+  LogOut,
+  Menu,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  User,
+} from "lucide-react";
 import { signOutAction } from "@/app/actions/auth";
 import { useFavorites } from "@/lib/favorites/useFavorites";
 
@@ -106,21 +120,12 @@ export function UserMenu({
         aria-label={`Meniu cont: ${displayName}`}
         className="inline-flex items-center gap-2.5 pl-3 pr-1.5 py-1 rounded-full border border-slate-200 bg-white hover:border-slate-300 hover:shadow-md transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ochre"
       >
-        {/* Stânga: Iconiță hamburger ☰ */}
-        <svg
-          className="w-4 h-4 text-ink-muted"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+        {/* Stânga: Iconiță hamburger */}
+        <Menu
+          className="w-4 h-4 text-ink-muted shrink-0"
+          strokeWidth={1.8}
           aria-hidden="true"
-        >
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
+        />
 
         {/* Dreapta: Avatar rotund + punct verde de sesiune activă */}
         <span className="relative">
@@ -170,10 +175,26 @@ export function UserMenu({
                 {displayName}
               </p>
               <p className="text-xs text-ink-muted truncate">{email}</p>
-              <span className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
-                {accountType === "company"
-                  ? "🏢 Cont Firmă B2C"
-                  : "🤝 Cont P2P"}
+              <span className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-ochre-light text-ochre">
+                {accountType === "company" ? (
+                  <>
+                    <Building2
+                      className="w-3 h-3 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Cont Business</span>
+                  </>
+                ) : (
+                  <>
+                    <User
+                      className="w-3 h-3 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Cont Personal</span>
+                  </>
+                )}
               </span>
             </div>
           </div>
@@ -192,21 +213,11 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
-            <svg
+            <Calendar
               className="w-4 h-4 text-ink-muted shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
-            </svg>
+            />
             <span>Rezervările mele</span>
           </Link>
           <Link
@@ -216,18 +227,11 @@ export function UserMenu({
             className="flex items-center justify-between gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
             <span className="flex items-center gap-3">
-              <svg
+              <Heart
                 className="w-4 h-4 text-rose-500 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={1.8}
                 aria-hidden="true"
-              >
-                <path d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-              </svg>
+              />
               <span>Favorite &amp; Salvate</span>
             </span>
             {hydrated && count > 0 && (
@@ -251,20 +255,11 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
-            <svg
+            <ShoppingBag
               className="w-4 h-4 text-ink-muted shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <path d="M16 10a4 4 0 0 1-8 0" />
-            </svg>
+            />
             <span>Inventarul meu</span>
           </Link>
           <Link
@@ -273,20 +268,12 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-semibold text-ochre hover:bg-ochre-light/50 transition-colors"
           >
-            <svg
+            <Plus
               className="w-4 h-4 text-ochre shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span>+ Adaugă obiect nou</span>
+            />
+            <span>Adaugă obiect nou</span>
           </Link>
           <Link
             href="/profil/plati"
@@ -294,19 +281,11 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
-            <svg
+            <CreditCard
               className="w-4 h-4 text-ink-muted shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
+            />
             <span>Plăți &amp; Încasări</span>
           </Link>
 
@@ -319,19 +298,11 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
-            <svg
+            <Bell
               className="w-4 h-4 text-ink-muted shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
+            />
             <span>Notificări</span>
           </Link>
           <Link
@@ -340,19 +311,11 @@ export function UserMenu({
             onClick={() => setOpen(false)}
             className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink hover:bg-slate-50 transition-colors"
           >
-            <svg
+            <User
               className="w-4 h-4 text-ink-muted shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.9"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+              strokeWidth={1.8}
               aria-hidden="true"
-            >
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
+            />
             <span>Profil &amp; setări</span>
           </Link>
           {isAdmin && (
@@ -362,9 +325,11 @@ export function UserMenu({
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm font-semibold text-ochre hover:bg-ochre-light/60 transition-colors"
             >
-              <span className="w-4 h-4 inline-flex items-center justify-center shrink-0" aria-hidden="true">
-                🛡️
-              </span>
+              <ShieldCheck
+                className="w-4 h-4 text-ochre shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
               <span>Panou Admin</span>
             </Link>
           )}
@@ -375,20 +340,11 @@ export function UserMenu({
               onClick={() => setOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm font-medium text-ink-muted hover:bg-slate-50 hover:text-ink transition-colors"
             >
-              <svg
+              <Database
                 className="w-4 h-4 text-ink-muted shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={1.8}
                 aria-hidden="true"
-              >
-                <ellipse cx="12" cy="5" rx="9" ry="3" />
-                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-              </svg>
+              />
               <span>Diagnostic DB</span>
             </Link>
           )}
@@ -401,20 +357,11 @@ export function UserMenu({
               type="submit"
               className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
             >
-              <svg
+              <LogOut
                 className="w-4 h-4 text-rose-500 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.9"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+                strokeWidth={1.8}
                 aria-hidden="true"
-              >
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                <polyline points="16 17 21 12 16 7" />
-                <line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
+              />
               <span>Delogare din cont</span>
             </button>
           </form>

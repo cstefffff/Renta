@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Download, Trash2 } from "lucide-react";
 import {
   anonymizeMyAccountAction,
   exportMyGdprDataAction,
@@ -154,11 +155,16 @@ export function GdprPrivacyPanel() {
             type="button"
             onClick={handleExportData}
             disabled={exportBusy}
-            className="catalog-btn-primary shrink-0 whitespace-nowrap"
+            className="catalog-btn-primary inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap"
           >
-            {exportBusy
-              ? "Se generează arhiva JSON..."
-              : "📥 Descarcă arhiva datelor mele (JSON)"}
+            {exportBusy ? (
+              "Se generează arhiva JSON..."
+            ) : (
+              <>
+                <Download className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>Descarcă arhiva datelor mele (JSON)</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -239,9 +245,12 @@ export function GdprPrivacyPanel() {
                 }
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
-                {deleteBusy
-                  ? "Se anonimizează contul..."
-                  : "Anonimizează și închide contul"}
+                <Trash2 className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  {deleteBusy
+                    ? "Se anonimizează contul..."
+                    : "Anonimizează și închide contul"}
+                </span>
               </button>
             </div>
 

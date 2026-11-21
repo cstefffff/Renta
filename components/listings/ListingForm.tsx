@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2, X } from "lucide-react";
 import { LISTING_CATEGORIES } from "@/lib/constants/categories";
 import { RENTA_CITIES, type ListingWithDetails } from "@/lib/types/database";
 import {
@@ -142,9 +143,9 @@ export function ListingForm({
               defaultValue={initialListing?.status ?? "available"}
               className="catalog-input font-mono text-xs"
             >
-              <option value="available">● DISPONIBIL (Activ)</option>
-              <option value="unavailable">○ INDISPONIBIL (Pauză)</option>
-              <option value="archived">▪ ARHIVAT (Ascuns)</option>
+              <option value="available">DISPONIBIL (Activ)</option>
+              <option value="unavailable">INDISPONIBIL (Pauză)</option>
+              <option value="archived">ARHIVAT (Ascuns)</option>
             </select>
           </div>
         )}
@@ -368,13 +369,23 @@ export function ListingForm({
                     <button
                       type="button"
                       onClick={() => toggleRemoveImage(img.id)}
-                      className={`w-full py-1 px-2 font-mono text-[10px] uppercase border transition-colors ${
+                      className={`inline-flex items-center justify-center gap-1 w-full py-1 px-2 font-mono text-[10px] uppercase border transition-colors ${
                         isMarked
                           ? "bg-red-800 text-cream-light border-red-900"
                           : "bg-cream text-ink border-ink/30 hover:border-red-800"
                       }`}
                     >
-                      {isMarked ? "✕ Va fi ștearsă" : "Șterge Foto"}
+                      {isMarked ? (
+                        <>
+                          <X className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                          <span>Va fi ștearsă</span>
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                          <span>Șterge Foto</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 );

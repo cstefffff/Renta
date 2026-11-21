@@ -1,5 +1,13 @@
 import Link from "next/link";
 import {
+  BadgeCheck,
+  Building2,
+  Check,
+  MapPin,
+  Star,
+  User,
+} from "lucide-react";
+import {
   getListingByIdAction,
   getUnavailableDateRangesAction,
 } from "@/app/actions/listings";
@@ -152,18 +160,32 @@ export default async function ObjectDetailPage({
                 </span>
 
                 {isCompany ? (
-                  <span className="px-3 py-1 rounded-full bg-ochre-light text-ochre font-semibold">
-                    🏢 Firmă de Închirieri (B2C)
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-ochre-light text-ochre font-semibold">
+                    <Building2
+                      className="w-3.5 h-3.5 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Business</span>
                   </span>
                 ) : (
-                  <span className="px-3 py-1 rounded-full bg-slate-100 text-ink font-semibold">
-                    🤝 Peer-to-Peer (P2P)
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 text-ink font-semibold">
+                    <User
+                      className="w-3.5 h-3.5 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
+                    <span>Personal</span>
                   </span>
                 )}
 
                 {totalReviewsCount > 0 && averageRating !== null && (
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-ink font-semibold">
-                    <span className="text-amber-400">★</span>
+                    <Star
+                      className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
                     <span>{Number(averageRating).toFixed(1)}</span>
                     <span className="text-ink-muted font-normal">
                       ({totalReviewsCount} recenzii)
@@ -173,13 +195,23 @@ export default async function ObjectDetailPage({
               </div>
 
               <span
-                className={`px-3 py-1 rounded-full font-semibold text-xs ${
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-semibold text-xs ${
                   isAvailable
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     : "bg-slate-100 text-ink-muted border border-slate-200"
                 }`}
               >
-                {isAvailable ? "● Disponibil acum" : "○ Indisponibil temporar"}
+                <span
+                  aria-hidden="true"
+                  className={`w-2 h-2 rounded-full shrink-0 ${
+                    isAvailable
+                      ? "bg-emerald-500"
+                      : "border border-slate-400 bg-transparent"
+                  }`}
+                />
+                <span>
+                  {isAvailable ? "Disponibil acum" : "Indisponibil temporar"}
+                </span>
               </span>
             </div>
 
@@ -192,8 +224,13 @@ export default async function ObjectDetailPage({
                 <span className="text-ink-muted block text-[11px]">
                   Locație ridicare
                 </span>
-                <strong className="text-ink font-semibold mt-0.5 block">
-                  📍 {listing.city}
+                <strong className="text-ink font-semibold mt-0.5 inline-flex items-center gap-1">
+                  <MapPin
+                    className="w-3.5 h-3.5 text-ochre shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>{listing.city}</span>
                 </strong>
               </div>
               <div className="bg-slate-50 rounded-xl p-3">
@@ -275,13 +312,23 @@ export default async function ObjectDetailPage({
                       : "Proprietar Individual (P2P)"}
                   </span>
                   {listing.owner?.kyb_verified && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold">
-                      ✓ KYB Verificat
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold">
+                      <BadgeCheck
+                        className="w-3.5 h-3.5 shrink-0"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                      <span>KYB Verificat</span>
                     </span>
                   )}
                   {listing.owner?.phone_verified && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-ink font-medium">
-                      ✓ Telefon Verificat
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-ink font-medium">
+                      <Check
+                        className="w-3.5 h-3.5 text-emerald-600 shrink-0"
+                        strokeWidth={1.8}
+                        aria-hidden="true"
+                      />
+                      <span>Telefon Verificat</span>
                     </span>
                   )}
                 </div>
@@ -296,13 +343,22 @@ export default async function ObjectDetailPage({
                 <div className="text-ink-muted font-medium">
                   Locație &amp; Protocol de Contact:
                 </div>
-                <div className="text-ink font-semibold">
-                  📍 Oraș: {listing.owner?.city || listing.city}
+                <div className="text-ink font-semibold inline-flex items-center gap-1.5">
+                  <MapPin
+                    className="w-3.5 h-3.5 text-ochre shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>Oraș: {listing.owner?.city || listing.city}</span>
                 </div>
                 {listing.owner?.rating_count &&
                 listing.owner.rating_count > 0 ? (
                   <div className="inline-flex items-center gap-1 text-ink font-semibold">
-                    <span className="text-amber-400">★</span>
+                    <Star
+                      className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                      strokeWidth={1.8}
+                      aria-hidden="true"
+                    />
                     <span>
                       {Number(listing.owner.rating_avg ?? 0).toFixed(1)} / 5
                     </span>
@@ -372,13 +428,19 @@ export default async function ObjectDetailPage({
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-ink">
-                          <span className="text-amber-400">
-                            {"★".repeat(rev.rating)}
-                          </span>
-                          <span className="text-slate-300">
-                            {"★".repeat(Math.max(0, 5 - rev.rating))}
-                          </span>
+                        <span className="inline-flex items-center gap-0.5 px-2.5 py-0.5 rounded-full bg-white border border-slate-200 font-semibold text-ink">
+                          {[1, 2, 3, 4, 5].map((starIndex) => (
+                            <Star
+                              key={starIndex}
+                              className={`w-3 h-3 shrink-0 ${
+                                starIndex <= rev.rating
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-slate-300"
+                              }`}
+                              strokeWidth={1.8}
+                              aria-hidden="true"
+                            />
+                          ))}
                           <span className="ml-1 text-[11px]">
                             ({rev.rating}/5)
                           </span>

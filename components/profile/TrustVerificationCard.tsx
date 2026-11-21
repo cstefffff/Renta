@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, Check, Circle, Phone, ShieldCheck } from "lucide-react";
 import {
   requestPhoneOtpAction,
   verifyPhoneOtpAction,
@@ -188,7 +189,8 @@ export function TrustVerificationCard({
           </h2>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-ink-muted">
-          🛡️ Crește încrederea în catalog
+          <ShieldCheck className="w-3.5 h-3.5 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          <span>Crește încrederea în catalog</span>
         </span>
       </div>
 
@@ -199,8 +201,9 @@ export function TrustVerificationCard({
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <h3 className="font-display text-base font-bold text-ink">
-                  📱 Verificare Telefon (OTP SMS)
+                <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+                  <Phone className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Verificare Telefon (OTP SMS)</span>
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">
                   Confirmă numărul tău de telefon pentru a debloca badge-ul de
@@ -210,11 +213,13 @@ export function TrustVerificationCard({
 
               {isPhoneVerified ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
-                  ✓ Telefon Verificat
+                  <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Telefon Verificat</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                  ○ Neverificat
+                  <Circle className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Neverificat</span>
                 </span>
               )}
             </div>
@@ -326,8 +331,9 @@ export function TrustVerificationCard({
           <div className="space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <h3 className="font-display text-base font-bold text-ink">
-                  🏢 Verificare Firmă ANAF (CUI)
+                <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
+                  <Building2 className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Verificare Firmă ANAF (CUI)</span>
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">
                   Validare automată KYB pentru firmele de închirieri (Segment B2C)
@@ -337,11 +343,13 @@ export function TrustVerificationCard({
 
               {isKybVerified ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
-                  ✓ Firmă Verificată ANAF (KYB)
+                  <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Firmă Verificată ANAF (KYB)</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
-                  ○ Neverificată
+                  <Circle className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                  <span>Neverificată</span>
                 </span>
               )}
             </div>
@@ -423,7 +431,11 @@ export function TrustVerificationCard({
 
           <p className="text-[11px] text-ink-muted">
             Firmele verificate ANAF primesc automat insigna{" "}
-            <strong className="text-emerald-700">🏢 Firmă Verificată ✓</strong>{" "}
+            <strong className="inline-flex items-center gap-1 text-emerald-700 align-bottom">
+              <Building2 className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>Firmă Verificată</span>
+              <Check className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            </strong>{" "}
             pe toate cardurile din catalogul public.
           </p>
         </div>

@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, Lock } from "lucide-react";
 import { createBookingAction } from "@/app/actions/bookings";
 import type {
   CancellationPolicy,
@@ -261,9 +262,12 @@ export function BookingWidget({
       ) : successInfo ? (
         /* Confirmare după trimiterea cererii */
         <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/80 space-y-3 text-xs text-emerald-950">
-          <div className="font-bold uppercase text-emerald-800">
-            ✓ Cerere înregistrată{" "}
-            {successInfo.bookingCode ? `(${successInfo.bookingCode})` : ""}
+          <div className="inline-flex items-center gap-1.5 font-bold uppercase text-emerald-800">
+            <CheckCircle2 className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+            <span>
+              Cerere înregistrată{" "}
+              {successInfo.bookingCode ? `(${successInfo.bookingCode})` : ""}
+            </span>
           </div>
           <p className="font-sans text-xs leading-relaxed">
             {successInfo.message}
@@ -444,7 +448,7 @@ export function BookingWidget({
       {/* Caseta Arhitecturală: Plată & Garanție Escrow */}
       <div className="p-3.5 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-1">
         <div className="text-[11px] font-semibold text-ink flex items-center gap-1.5">
-          <span>🔒</span>
+          <Lock className="w-3.5 h-3.5 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
           <span>Rezervare Securizată &amp; Protecție GDPR</span>
         </div>
         <p className="text-[11px] text-ink-muted leading-relaxed">

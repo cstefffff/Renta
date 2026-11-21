@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AlertTriangle, Check, CheckCircle2, Circle } from "lucide-react";
 import { startPayoutOnboardingAction } from "@/app/actions/payments";
 import type {
   DepositStatus,
@@ -250,10 +251,10 @@ export function PayoutOnboardingPanel({
         <div className="bg-amber-50 border border-amber-300/90 rounded-2xl p-5 shadow-sm space-y-3">
           <div className="flex items-start gap-3">
             <span
-              className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0 font-bold text-sm"
+              className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center shrink-0"
               aria-hidden="true"
             >
-              !
+              <AlertTriangle className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
             </span>
             <div className="space-y-2 text-sm text-amber-950">
               <h2 className="font-display font-bold text-base">
@@ -298,12 +299,12 @@ export function PayoutOnboardingPanel({
           {mode === "stripe" ? (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              ● STRIPE CONNECT TEST MODE ACTIV
+              STRIPE CONNECT TEST MODE ACTIV
             </span>
           ) : (
             <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-bold bg-ochre-light text-ochre border border-ochre/25">
               <span className="w-2 h-2 rounded-full bg-ochre" />
-              ● MOD SANDBOX ESCROW GRATUIT (Fără chei Stripe necesare — 0 RON
+              MOD SANDBOX ESCROW GRATUIT (Fără chei Stripe necesare — 0 RON
               costuri)
             </span>
           )}
@@ -466,7 +467,7 @@ export function PayoutOnboardingPanel({
           )
         ) : (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 px-4 py-3 text-xs text-emerald-900 flex items-center gap-2.5">
-            <span className="font-bold text-emerald-600">✓</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" strokeWidth={1.8} aria-hidden="true" />
             <span>
               Contul tău este activ și pregătit să primească încasări automate
               la finalizarea fiecărei închirieri.
@@ -772,7 +773,11 @@ function CapabilityBadge({
           : "bg-white text-slate-500 border-slate-200"
       }`}
     >
-      <span aria-hidden="true">{active ? "✓" : "○"}</span>
+      {active ? (
+        <Check className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+      ) : (
+        <Circle className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+      )}
       <span>{label}</span>
     </span>
   );

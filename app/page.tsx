@@ -1,21 +1,77 @@
 import Link from "next/link";
+import {
+  Bike,
+  Building2,
+  Camera,
+  Gamepad2,
+  LayoutGrid,
+  Package,
+  PartyPopper,
+  Search,
+  Shirt,
+  Tent,
+  User,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { getPublicListingsAction } from "@/app/actions/listings";
+import { getPaginatedPublicListingsAction } from "@/app/actions/listings";
 import { LISTING_CATEGORIES } from "@/lib/constants/categories";
-import { ObjectCard } from "@/components/catalog/ObjectCard";
-import type { ListingWithDetails } from "@/lib/types/database";
+import { EndlessCatalogGrid } from "@/components/catalog/EndlessCatalogGrid";
+import type { CategorySlug, ListingWithDetails } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Pagina Principală (Homepage Storefront) — `app/page.tsx`
+ * Mapare iconițe vectoriale (`lucide-react`) pentru categoriile de pe Homepage.
+ * Analogie C/Java: un `Map<CategorySlug, LucideIcon>` (HashMap imutabil) care
+ * asociază fiecărui slug de categorie o componentă SVG curată și uniformă.
+ */
+const CATEGORY_ICONS: Partial<Record<CategorySlug, LucideIcon>> = {
+  "scule-unelte": Wrench,
+  "foto-video": Camera,
+  "camping-outdoor": Tent,
+  "evenimente-party": PartyPopper,
+  electronice: Gamepad2,
+  vestimentar: Shirt,
+  "sport-timp-liber": Bike,
+  altele: Package,
+};
+
+/**
+ * Pașii secțiunii „Cum funcționează RentA în 3 pași simpli”.
+ * Structură statică de tip array de obiecte (echivalentul unui array de struct-uri
+ * constante în C sau `List.of(...)` în Java).
+ */
+const HOW_IT_WORKS_STEPS = [
+  {
+    step: "1",
+    title: "Găsești & rezervi online",
+    description:
+      "Alegi perioada dorită și vezi transparent prețul total și garanția returnabilă, fără costuri ascunse.",
+  },
+  {
+    step: "2",
+    title: "Predare sigură cu Proces-Verbal",
+    description:
+      "Încărcați poze de Check-in direct în aplicație, iar garanția rămâne protejată în Escrow.",
+  },
+  {
+    step: "3",
+    title: "Folosești & returnezi fără griji",
+    description:
+      "La returnarea obiectului, garanția este eliberată integral și poți lăsa o recenzie verificată.",
+  },
+] as const;
+
+/**
+ * Pagina Principală (Homepage) — `app/page.tsx`
  *
  * Explicație pentru C/Java:
- * Homepage-ul este un Async Server Component care citește opțional parametrul
- * `?segment=` din URL (`all`, `individual`, `company`) și interoghează direct
- * din PostgreSQL obiectele disponibile, afișând un Storefront modern E-Commerce
- * cu Hero Banner, filtre rapide pe categorii, segmente (Peer-to-Peer vs Firme)
- * și grila de carduri în 4 coloane pe ecrane mari.
+ * Homepage-ul este un Async Server Component (rulează exclusiv pe server, nu trimite
+ * cod JavaScript inutil în browser). Citește opțional parametrul `?segment=` din URL
+ * (`all`, `individual`, `company`) și interoghează direct PostgreSQL prin Server Action-ul
+ * `getPublicListingsAction`, apoi trimite HTML gata randat către vizitator.
  */
 interface HomePageProps {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
@@ -33,15 +89,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       ? rawSegment
       : "all";
 
-  const rawListings = configured
-    ? await getPublicListingsAction({ segment: activeSegment })
+  const paginated = configured
+    ? await getPaginatedPublicListingsAction({
+        segment: activeSegment,
+        page: 1,
+        pageSize: 12,
+      })
+    : { items: [], totalCount: 0, page: 1, pageSize: 12, totalPages: 1 };
+
+  const items: ListingWithDetails[] = Array.isArray(paginated.items)
+    ? paginated.items
     : [];
-  const listings: ListingWithDetails[] = Array.isArray(rawListings)
-    ? rawListings
-    : [];
+  const totalCount = paginated.totalCount ?? items.length;
+
+  const catalogHref =
+    activeSegment === "all" ? "/catalog" : `/catalog?segment=${activeSegment}`;
 
   return (
-    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 space-y-8">
+    <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-8">
       {/* Banner de avertizare dacă .env.local nu este încă completat */}
       {!configured && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm">
@@ -69,57 +134,55 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       )}
 
-      {/* Hero Banner Modern Storefront */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-sm relative overflow-hidden space-y-6">
-        {/* Accent decorativ subtil mint/emerald în colțul dreapta-sus */}
+      {/* 1. Hero Banner Compact & Limbaj 100% Natural */}
+      <section className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm relative overflow-hidden">
+        {/* Accent decorativ subtil verde-smarald în colțul dreapta-sus */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-ochre-light/60 blur-3xl"
+          className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-ochre-light/60 blur-3xl"
         />
 
-        <div className="relative flex flex-wrap items-center justify-between gap-3">
-          <span className="bg-ochre-light text-ochre font-semibold text-xs px-3 py-1 rounded-full inline-flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-ochre animate-pulse" />
-            Platformă Hibridă: Peer-to-Peer &amp; Firme de Închirieri
-          </span>
-
-          <span className="font-mono text-xs text-ink-muted bg-slate-100 px-3 py-1 rounded-full">
-            REGISTRU ACTIV &bull; #CAT-2025-RO
+        <div className="relative">
+          <span className="bg-ochre-light text-ochre font-semibold text-xs px-3 py-1 rounded-full inline-flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-ochre" />
+            <span>
+              Închirieri sigure în România &middot; Garanție protejată în Escrow
+            </span>
           </span>
         </div>
 
-        <div className="relative max-w-3xl space-y-3">
-          <h1 className="font-display text-2xl sm:text-4xl lg:text-[40px] font-extrabold text-ink tracking-tight leading-[1.15]">
-            Închiriază unelte, echipamente și produse verificate direct din
-            orașul tău.
+        <div className="relative max-w-3xl space-y-2.5">
+          <h1 className="font-display text-2xl sm:text-4xl font-extrabold text-ink tracking-tight leading-[1.15]">
+            Închiriază echipamente verificate, direct din orașul tău.
           </h1>
 
           <p className="text-sm sm:text-base text-ink-muted leading-relaxed">
-            Explorează un storefront unificat unde atât proprietarii individuali
-            (Peer-to-Peer), cât și firmele locale de închirieri (B2C) își
-            publică inventarul cu preț clar pe zi și rezervare rapidă.
+            De la proprietari locali sau firme verificate — cu preț clar pe zi,
+            proces-verbal foto și garanție returnabilă.
           </p>
         </div>
 
-        {/* Bară integrată de căutare rapidă către /catalog */}
+        {/* Bară compactă de căutare rapidă pe un singur rând pe desktop */}
         <form
           action="/catalog"
           method="GET"
-          className="relative bg-slate-50/90 border border-slate-200/90 rounded-2xl p-3 grid grid-cols-1 sm:grid-cols-12 gap-3"
+          className="relative bg-slate-50 border border-slate-200/90 rounded-2xl p-2 grid grid-cols-1 sm:grid-cols-12 gap-2"
         >
           <div className="sm:col-span-5">
             <input
               type="text"
               name="q"
-              placeholder="Caută scule Bosch, cameră Sony, cort, #OBJ-0001..."
-              className="w-full bg-white border border-slate-200/90 rounded-xl px-4 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
+              aria-label="Caută echipamente"
+              placeholder="Ce vrei să închiriezi? Ex: bormașină, cameră Sony, cort..."
+              className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-sm text-ink placeholder:text-ink-muted focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
             />
           </div>
           <div className="sm:col-span-3">
             <select
               name="category"
+              aria-label="Categorie"
               defaultValue=""
-              className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
+              className="w-full bg-white border border-slate-200/90 rounded-xl px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
             >
               <option value="">Toate categoriile</option>
               {LISTING_CATEGORIES.map((cat) => (
@@ -132,8 +195,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div className="sm:col-span-2">
             <select
               name="city"
+              aria-label="Oraș"
               defaultValue=""
-              className="w-full bg-white border border-slate-200/90 rounded-xl px-3.5 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
+              className="w-full bg-white border border-slate-200/90 rounded-xl px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
             >
               <option value="">Toate orașele</option>
               <option value="București">București</option>
@@ -146,135 +210,177 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <div className="sm:col-span-2">
             <button
               type="submit"
-              className="w-full h-full bg-ochre hover:bg-ochre-hover text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5"
+              className="w-full h-full bg-ochre hover:bg-ochre-hover text-white font-semibold text-sm py-2.5 px-4 rounded-xl shadow-sm transition-all inline-flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Caută echipamente</span>
+              <Search
+                className="w-4 h-4 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>Caută</span>
             </button>
           </div>
         </form>
+      </section>
 
-        {/* Pill-uri rapide de Categorii sub bara de căutare */}
-        <div className="relative pt-1 space-y-2.5">
-          <div className="flex items-center justify-between text-xs text-ink-muted">
-            <span className="font-semibold text-ink">
-              Categorii Populare în Storefront:
-            </span>
-            <div className="hidden sm:flex items-center gap-3">
-              <Link
-                href="/listarile-mele"
-                className="text-ink-muted hover:text-ink font-medium transition-colors"
-              >
-                Inventarul Meu
-              </Link>
-              <span>&bull;</span>
-              <Link
-                href="/listarile-mele/nou"
-                className="text-ochre hover:text-ochre-hover font-semibold transition-colors"
-              >
-                + Adaugă Obiect Nou
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
+      {/* 2. Bară Orizontală de Categorii pe un singur rând */}
+      <nav
+        aria-label="Categorii de echipamente"
+        className="flex items-center gap-2 overflow-x-auto pb-1"
+      >
+        <Link
+          href="/catalog"
+          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-ochre-light text-ochre hover:bg-ochre hover:text-white whitespace-nowrap transition-all shrink-0"
+        >
+          <LayoutGrid
+            className="w-3.5 h-3.5 shrink-0"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          <span>Toate categoriile</span>
+        </Link>
+        {LISTING_CATEGORIES.map((cat) => {
+          const CategoryIcon = CATEGORY_ICONS[cat.slug] ?? Package;
+          return (
             <Link
-              href="/catalog"
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-ochre-light text-ochre hover:bg-ochre hover:text-white transition-all"
+              key={cat.slug}
+              href={`/catalog?category=${cat.slug}`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium bg-white text-ink border border-slate-200/90 hover:border-ochre/40 hover:bg-ochre-light hover:text-ochre whitespace-nowrap transition-all shrink-0 shadow-2xs"
             >
-              <span>📦</span>
-              <span>Toate Produsele</span>
+              <CategoryIcon
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>{cat.label}</span>
             </Link>
-            {LISTING_CATEGORIES.map((cat) => (
-              <Link
-                key={cat.slug}
-                href={`/catalog?category=${cat.slug}`}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-slate-100 text-ink hover:bg-ochre-light hover:text-ochre border border-transparent hover:border-ochre/20 transition-all"
-              >
-                <span className="font-mono text-[10px] text-ink-muted">
-                  {cat.code}
-                </span>
-                <span>{cat.label}</span>
-              </Link>
-            ))}
+          );
+        })}
+      </nav>
+
+      {/* 3. Secțiune super compactă „Cum funcționează RentA în 3 pași simpli” — deasupra feed-ului endless */}
+      <section className="space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-base sm:text-lg font-extrabold text-ink">
+              Cum funcționează RentA în 3 pași simpli
+            </h2>
+            <p className="text-xs text-ink-muted">
+              Fără birocrație și fără surprize — tot procesul este clar de la
+              rezervare până la returnare.
+            </p>
           </div>
+          <Link
+            href="/listarile-mele/nou"
+            className="text-xs font-semibold text-ochre hover:text-ochre-hover transition-colors whitespace-nowrap self-start sm:self-auto"
+          >
+            + Listează echipamentul tău &rarr;
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {HOW_IT_WORKS_STEPS.map((item) => (
+            <div
+              key={item.step}
+              className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-2xs flex items-start gap-3"
+            >
+              <span className="w-7 h-7 rounded-full bg-ochre text-white font-display font-bold text-xs inline-flex items-center justify-center shadow-xs shrink-0 mt-0.5">
+                {item.step}
+              </span>
+              <div className="space-y-1 min-w-0">
+                <h3 className="font-display text-sm font-bold text-ink leading-snug">
+                  {item.title}
+                </h3>
+                <p className="text-xs text-ink-muted leading-relaxed">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 
-      {/* Secțiunea Storefront pe Homepage: Antet + Filtre Segment + Grila de Carduri */}
-      <section className="space-y-6">
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div>
-            <h2 className="font-display text-xl sm:text-2xl font-extrabold text-ink">
-              Echipamente &amp; Produse Disponibile
-            </h2>
-            <p className="text-xs sm:text-sm text-ink-muted mt-0.5">
-              Showing{" "}
-              <span className="font-semibold text-ink">{listings.length}</span>{" "}
-              obiecte verificate în timp real
+      {/* 4. Feed-ul Endless „Echipamente disponibile acum” (gen OLX / Vinted) */}
+      <section className="space-y-5">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h2 className="font-display text-xl sm:text-2xl font-extrabold text-ink">
+                Echipamente disponibile acum
+              </h2>
+              <Link
+                href={catalogHref}
+                className="text-xs sm:text-sm font-semibold text-ochre hover:text-ochre-hover transition-colors inline-flex items-center gap-1"
+              >
+                <span>Filtre avansate</span>
+                <span aria-hidden="true">&rarr;</span>
+              </Link>
+            </div>
+            <p className="text-xs sm:text-sm text-ink-muted">
+              <span className="font-semibold text-ink">{totalCount}</span>{" "}
+              anunțuri active, gata de rezervare
             </p>
           </div>
 
-          {/* Pill-urile de filtrare după segment + Link către /catalog */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="inline-flex flex-wrap items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
-              <Link
-                href="/"
-                scroll={false}
-                className={`px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
-                  activeSegment === "all"
-                    ? "bg-ochre text-white shadow-sm"
-                    : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                Toate ({activeSegment === "all" ? listings.length : "All"})
-              </Link>
-
-              <Link
-                href="/?segment=individual"
-                scroll={false}
-                className={`px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
-                  activeSegment === "individual"
-                    ? "bg-ochre text-white shadow-sm"
-                    : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                🤝 Peer-to-Peer (P2P)
-              </Link>
-
-              <Link
-                href="/?segment=company"
-                scroll={false}
-                className={`px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
-                  activeSegment === "company"
-                    ? "bg-ochre text-white shadow-sm"
-                    : "text-ink-muted hover:text-ink"
-                }`}
-              >
-                🏢 Firme de Închirieri
-              </Link>
-            </div>
+          {/* Filtre segment în limbaj natural */}
+          <div className="inline-flex flex-wrap items-center gap-1.5 bg-white border border-slate-200/90 p-1 rounded-xl shadow-2xs self-start lg:self-auto">
+            <Link
+              href="/"
+              scroll={false}
+              className={`px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
+                activeSegment === "all"
+                  ? "bg-ochre text-white shadow-sm"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              Toate
+            </Link>
 
             <Link
-              href="/catalog"
-              className="px-3.5 py-2 text-xs font-semibold text-ochre bg-ochre-light hover:bg-ochre hover:text-white rounded-xl transition-all"
+              href="/?segment=individual"
+              scroll={false}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
+                activeSegment === "individual"
+                  ? "bg-ochre text-white shadow-sm"
+                  : "text-ink-muted hover:text-ink"
+              }`}
             >
-              Filtre Avansate &rarr;
+              <User
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>Personal</span>
+            </Link>
+
+            <Link
+              href="/?segment=company"
+              scroll={false}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold transition-all rounded-lg ${
+                activeSegment === "company"
+                  ? "bg-ochre text-white shadow-sm"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              <Building2
+                className="w-3.5 h-3.5 shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>Business</span>
             </Link>
           </div>
         </div>
 
-        {/* Grila de produse */}
-        {listings.length === 0 ? (
+        {/* Grila continuă cu Infinite Scroll sau Empty State */}
+        {items.length === 0 ? (
           <div className="bg-white border border-slate-200/90 rounded-2xl p-10 text-center space-y-4 shadow-sm">
-            <div className="inline-block font-mono text-xs px-3 py-1 rounded-full bg-slate-100 text-ink-muted font-semibold">
-              NICIUN OBIECT ÎN ACEST SEGMENT
-            </div>
             <h3 className="font-display text-xl font-bold text-ink">
-              Nu există încă obiecte publicate în acest segment
+              Nu există încă anunțuri în această categorie
             </h3>
             <p className="text-sm text-ink-muted max-w-md mx-auto">
-              Poți schimba filtrul de segment sau poți adăuga chiar acum un
-              obiect nou în catalogul RentA.
+              Poți reveni la toate anunțurile sau poți publica chiar acum primul
+              echipament disponibil pentru închiriere.
             </p>
             <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
               {activeSegment !== "all" && (
@@ -282,33 +388,26 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   href="/"
                   className="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-ink transition-all"
                 >
-                  Vezi Toate Segmentele
+                  Vezi toate anunțurile
                 </Link>
               )}
               <Link
                 href="/listarile-mele/nou"
                 className="px-5 py-2.5 rounded-xl bg-ochre hover:bg-ochre-hover text-white text-xs font-semibold shadow-sm transition-all"
               >
-                + Adaugă Obiect în Catalog
+                + Listează primul tău obiect
               </Link>
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {listings.map((item) => (
-              <ObjectCard key={item.id} listing={item} />
-            ))}
-          </div>
+          <EndlessCatalogGrid
+            key={activeSegment}
+            initialItems={items}
+            totalCount={totalCount}
+            pageSize={12}
+            filters={{ segment: activeSegment }}
+          />
         )}
-
-        <div className="flex justify-center pt-2">
-          <Link
-            href="/catalog"
-            className="bg-white hover:bg-slate-50 text-ink border border-slate-200/90 font-semibold text-sm px-6 py-3 rounded-xl shadow-sm transition-all"
-          >
-            Deschide Catalogul Complet cu Filtre Avansate &rarr;
-          </Link>
-        </div>
       </section>
     </div>
   );

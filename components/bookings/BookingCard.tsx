@@ -3,6 +3,17 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  FileText,
+  Star,
+  X,
+  XCircle,
+} from "lucide-react";
 import { updateBookingStatusAction } from "@/app/actions/bookings";
 import {
   initiateBookingCheckoutAction,
@@ -29,33 +40,39 @@ function getStatusBadge(status: BookingStatus) {
   switch (status) {
     case "pending":
       return {
-        label: "● ÎN AȘTEPTARE APROBARE",
+        label: "ÎN AȘTEPTARE APROBARE",
         className: "bg-ochre-light border-ochre text-ink",
+        Icon: Clock,
       };
     case "confirmed":
       return {
-        label: "● CONFIRMATĂ / ÎN CURS",
+        label: "CONFIRMATĂ / ÎN CURS",
         className: "bg-emerald-900/15 border-emerald-800 text-emerald-950",
+        Icon: CheckCircle2,
       };
     case "completed":
       return {
-        label: "✓ ÎNCHIRIERE FINALIZATĂ",
+        label: "ÎNCHIRIERE FINALIZATĂ",
         className: "bg-ink text-cream border-ink",
+        Icon: Check,
       };
     case "rejected":
       return {
-        label: "✕ REFUZATĂ DE OFERTANT",
+        label: "REFUZATĂ DE OFERTANT",
         className: "bg-red-900/10 border-red-800/50 text-red-950",
+        Icon: XCircle,
       };
     case "cancelled":
       return {
-        label: "○ ANULATĂ DE CHIRIAȘ",
+        label: "ANULATĂ DE CHIRIAȘ",
         className: "bg-cream-dark border-ink/30 text-ink-muted",
+        Icon: XCircle,
       };
     default:
       return {
         label: String(status).toUpperCase(),
         className: "bg-cream-dark border-ink/30 text-ink",
+        Icon: Clock,
       };
   }
 }
@@ -215,9 +232,10 @@ export function BookingCard({ booking, role }: BookingCardProps) {
         </div>
 
         <span
-          className={`px-2.5 py-0.5 text-[10px] font-bold uppercase border ${badge.className}`}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-bold uppercase border ${badge.className}`}
         >
-          {badge.label}
+          <badge.Icon className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          <span>{badge.label}</span>
         </span>
       </div>
 
@@ -318,20 +336,27 @@ export function BookingCard({ booking, role }: BookingCardProps) {
       {(booking.status === "confirmed" || booking.status === "completed") && (
         <div className="rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 flex flex-wrap items-center justify-between gap-2 text-xs">
           {!payment || payment.payment_status === "unpaid" ? (
-            <span className="inline-flex items-center gap-2 font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
-              💳 Așteaptă plata chiriei &amp; garanției
+            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full">
+              <CreditCard className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>Așteaptă plata chiriei &amp; garanției</span>
             </span>
           ) : payment.payment_status === "paid" ? (
-            <span className="inline-flex items-center gap-2 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-              ✓ Plătită ({Number(payment.total_charged_ron).toFixed(0)} RON)
-              &middot; Garanție {Number(payment.deposit_amount_ron).toFixed(0)}{" "}
-              RON în Escrow
+            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+              <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+              <span>
+                Plătită ({Number(payment.total_charged_ron).toFixed(0)} RON)
+                &middot; Garanție {Number(payment.deposit_amount_ron).toFixed(0)}{" "}
+                RON în Escrow
+              </span>
             </span>
           ) : payment.payment_status === "released" ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-                ✓ Fonduri eliberate către ofertant (
-                {Number(payment.owner_payout_ron).toFixed(0)} RON)
+                <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>
+                  Fonduri eliberate către ofertant (
+                  {Number(payment.owner_payout_ron).toFixed(0)} RON)
+                </span>
               </span>
               {payment.deposit_status === "released" && (
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-white border border-emerald-200 text-emerald-700">
@@ -377,13 +402,19 @@ export function BookingCard({ booking, role }: BookingCardProps) {
                 type="button"
                 disabled={paymentBusy}
                 onClick={() => handleEscrowDecision("release_all")}
-                className="catalog-btn-primary py-1.5 px-4 text-xs"
+                className="catalog-btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-xs"
               >
-                {paymentBusy
-                  ? "Se procesează..."
-                  : `✓ Eliberează Garanția & Încasează (${Number(
-                      payment.owner_payout_ron
-                    ).toFixed(0)} RON)`}
+                {paymentBusy ? (
+                  "Se procesează..."
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                    <span>
+                      Eliberează Garanția &amp; Încasează (
+                      {Number(payment.owner_payout_ron).toFixed(0)} RON)
+                    </span>
+                  </>
+                )}
               </button>
               {Number(payment.deposit_amount_ron) > 0 && (
                 <button
@@ -440,13 +471,15 @@ export function BookingCard({ booking, role }: BookingCardProps) {
                 href={`/rezervarile-mele/${booking.id}/proces-verbal`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-ochre-light hover:border-ochre/40 text-ink font-sans text-xs font-medium transition-colors"
               >
-                <span>📄 Proces-Verbal &amp; Poze</span>
+                <FileText className="w-3.5 h-3.5 shrink-0 text-ochre" strokeWidth={1.8} aria-hidden="true" />
+                <span>Proces-Verbal &amp; Poze</span>
               </Link>
               <Link
                 href={`/rezervarile-mele/${booking.id}/disputa`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-200 bg-amber-50/70 hover:bg-amber-100/80 text-amber-900 font-sans text-xs font-medium transition-colors"
               >
-                <span>⚠️ Dispută</span>
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-amber-700" strokeWidth={1.8} aria-hidden="true" />
+                <span>Dispută</span>
               </Link>
             </>
           )}
@@ -460,17 +493,25 @@ export function BookingCard({ booking, role }: BookingCardProps) {
                 type="button"
                 disabled={busy}
                 onClick={() => handleTransition("confirmed")}
-                className="catalog-btn-primary py-1.5 px-4 text-xs"
+                className="catalog-btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-xs"
               >
-                {busy ? "Se procesează..." : "✓ Acceptă Rezervarea"}
+                {busy ? (
+                  "Se procesează..."
+                ) : (
+                  <>
+                    <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                    <span>Acceptă Rezervarea</span>
+                  </>
+                )}
               </button>
               <button
                 type="button"
                 disabled={busy}
                 onClick={() => handleTransition("rejected")}
-                className="px-3 py-1.5 border border-red-800/50 bg-red-900/10 hover:bg-red-800 hover:text-cream-light font-mono text-xs uppercase transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-800/50 bg-red-900/10 hover:bg-red-800 hover:text-cream-light font-mono text-xs uppercase transition-colors"
               >
-                ✕ Refuză
+                <X className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                <span>Refuză</span>
               </button>
             </>
           )}
@@ -507,11 +548,16 @@ export function BookingCard({ booking, role }: BookingCardProps) {
                 type="button"
                 disabled={paymentBusy}
                 onClick={handleCheckout}
-                className="catalog-btn-primary py-1.5 px-4 text-xs"
+                className="catalog-btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-xs"
               >
-                {paymentBusy
-                  ? "Se inițiază plata..."
-                  : "💳 Plătește & Blochează Garanția"}
+                {paymentBusy ? (
+                  "Se inițiază plata..."
+                ) : (
+                  <>
+                    <CreditCard className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                    <span>Plătește &amp; Blochează Garanția</span>
+                  </>
+                )}
               </button>
             )}
 
@@ -520,11 +566,20 @@ export function BookingCard({ booking, role }: BookingCardProps) {
             <button
               type="button"
               onClick={() => setShowReviewForm((prev) => !prev)}
-              className="catalog-btn-primary py-1.5 px-4 text-xs"
+              className="catalog-btn-primary inline-flex items-center gap-1.5 py-1.5 px-4 text-xs"
             >
-              {showReviewForm
-                ? "Închide Formularul de Recenzie"
-                : "★ Lasă o Recenzie pentru această Închiriere"}
+              {showReviewForm ? (
+                "Închide Formularul de Recenzie"
+              ) : (
+                <>
+                  <Star
+                    className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
+                  <span>Lasă o Recenzie pentru această Închiriere</span>
+                </>
+              )}
             </button>
           )}
         </div>
@@ -563,13 +618,18 @@ export function BookingCard({ booking, role }: BookingCardProps) {
                   key={star}
                   type="button"
                   onClick={() => setRating(star)}
-                  className={`px-3 py-1.5 border transition-colors ${
+                  className={`inline-flex items-center gap-1 px-3 py-1.5 border transition-colors ${
                     rating === star
                       ? "bg-ochre text-cream-light border-ink font-bold"
                       : "bg-cream-light text-ink border-ink/30 hover:border-ink"
                   }`}
                 >
-                  [{star} ★]
+                  <span>{star}</span>
+                  <Star
+                    className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0"
+                    strokeWidth={1.8}
+                    aria-hidden="true"
+                  />
                 </button>
               ))}
             </div>

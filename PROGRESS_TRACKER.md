@@ -3,8 +3,9 @@
 Acest document urmărește execuția pas-cu-pas a platformei **RentA** (Marketplace Hibrid de Închirieri P2P + B2C).
 **Regulă de Aur:** Nicio micro-etapă nu poate trece la statusul `[x] Finalizat` fără validarea `renta-qa-tracker` (TypeScript check, Build check, Test funcțional, Audit Securitate & RLS).
 
-> **Notă Operațională Curentă (2026-11-21):**
+> **Notă Operațională Curentă (2026-11-22):**
 >
+> - **TESTARE CAPACITATE & POPULARE MASIVĂ (`v1.2.0` — 2026-11-22): `[x] Finalizat`** — Populate în Supabase **50 conturi virtuale** (32 Personal + 18 Business) în 8 orașe și **100 anunțuri noi (`#OBJ-0025` – `#OBJ-0124`)** cu 200+ fotografii în `public.listing_images`. Total curent în platformă: **123 anunțuri active**, 69 profiluri, timp de răspuns interogare SSR **~233 ms**, feed Endless Scroll testat la volum ridicat.
 > - **PROGRES MVP v0 (Fazele 0–9): 30 / 30 Micro-Etape Finalizate (100%)**
 > - **PROGRES UZ COMERCIAL — VALUL 1 (Faza 10: `M10.1` – `M10.4`): 4 / 4 Micro-Etape Finalizate & Validate Live (`[x] Finalizat` — migrația `003_commercial_hardening.sql` confirmată live în Supabase; aplicația este publicată pe Vercel la `https://renta-peach.vercel.app`)**.
 > - **REDESIGN UI/UX (`v0.8.0` — Modern Storefront / E-Commerce Dashboard): `[x] Finalizat (2026-11-16)`** — Sistemul de design și interfața au fost actualizate la arhitectura **Modern Storefront** (inspirată din „Corelystics Store > Products”), construită modular cu variabile CSS în `app/globals.css` și tokeni semantici în `tailwind.config.ts` (`#F8FAFC` / `#FFFFFF` / `#F1F5F9`, text Slate `#0F172A`, accent principal Emerald Teal `#109E82` ușor de schimbat dintr-un singur loc), `SidebarRail.tsx` vertical + `Header.tsx` cu breadcrumb și căutare `⌘ + F` + `FilterBar.tsx` vertical pe 2 coloane în `/catalog` + `ObjectCard.tsx` modern rotunjit.
