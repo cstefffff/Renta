@@ -288,13 +288,16 @@ export default async function ObjectDetailPage({
 
           {/* Fișa Proprietarului / Ofertantului (100% GDPR Safe) */}
           <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <h2 className="font-display text-lg font-bold text-ink">
-                Informații Ofertant (Proprietar Verificat)
+                Informații Ofertant
               </h2>
-              <span className="font-mono text-xs text-ink-muted bg-slate-100 px-2.5 py-1 rounded-lg">
-                VERIFICAT GDPR
-              </span>
+              <Link
+                href={`/profil/${listing.owner_id}`}
+                className="inline-flex items-center gap-1 text-xs font-semibold text-ochre hover:underline"
+              >
+                <span>Vezi profilul &amp; toate anunțurile &rarr;</span>
+              </Link>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
@@ -302,14 +305,15 @@ export default async function ObjectDetailPage({
                 <div className="text-ink-muted font-medium">
                   Denumire ofertant:
                 </div>
-                <div className="text-base font-bold text-ink font-display">
+                <Link
+                  href={`/profil/${listing.owner_id}`}
+                  className="text-base font-bold text-ink hover:text-ochre transition-colors font-display block"
+                >
                   {listing.owner?.display_name || "Membru Catalog RentA"}
-                </div>
+                </Link>
                 <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
                   <span className="px-2.5 py-0.5 rounded-full bg-ochre-light text-ochre font-semibold">
-                    {isCompany
-                      ? "Firmă de Închirieri (B2C)"
-                      : "Proprietar Individual (P2P)"}
+                    {isCompany ? "Business" : "Personal"}
                   </span>
                   {listing.owner?.kyb_verified && (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-semibold">
@@ -318,7 +322,7 @@ export default async function ObjectDetailPage({
                         strokeWidth={1.8}
                         aria-hidden="true"
                       />
-                      <span>KYB Verificat</span>
+                      <span>Business verificat</span>
                     </span>
                   )}
                   {listing.owner?.phone_verified && (

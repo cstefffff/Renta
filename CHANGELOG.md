@@ -4,6 +4,39 @@ Toate modificările notabile, deciziile arhitecturale și validările QA ale pla
 
 ---
 
+## [v1.3.0-admin-360-user-inspector] — 2026-11-22
+### Adăugat (Admin 360° Account Inspector — View-Only / Read-Only User View `/admin/utilizatori/[id]`)
+- **Contract TypeScript & Server Action 360° (`lib/types/database.ts`, `app/actions/admin.ts`)** (`renta-backend`):
+  - Adăugat DTO-ul `AdminUserInspectionData` în `lib/types/database.ts`, agregând profilul public (`public.profiles`), datele private (`public.profile_private`), KPI-urile contului, toate anunțurile (inclusiv `unavailable` și `archived`), rezervările ca proprietar și ca chiriaș, facturile fiscale și jurnalul de audit.
+  - Adăugată acțiunea `getAdminUserInspectionDataAction(targetUserId)` în `app/actions/admin.ts`: verifică obligatoriu `requireAdminContext()` înainte de orice interogare (returnează DTO gol cu `authorized: false` pentru non-admini), validează formatul UUID și execută interogările în paralel prin `Promise.all` sub politicile RLS `*_select_admin` din Migrațiile 008 și 009.
+- **Pagină Dedicată Admin 360° Account Inspector (`app/(dashboard)/admin/utilizatori/[id]/page.tsx`)** (`renta-frontend`):
+  - Pagină Async Server Component **100% Read-Only (View-Only)** conform principiilor GDPR Art. 6 & 32 (fără preluarea sesiunii utilizatorului / fără impersonare și fără formulare de mutație în numele utilizatorului), construită cu **0 emoji-uri** (exclusiv iconițe vectoriale `lucide-react`).
+  - Include bannerul de siguranță `MOD VIZUALIZARE (READ-ONLY // GDPR ART. 6 & 32)`, Hero Card cu insigne (`Personal`/`Business`, `Telefon verificat`, `Business verificat ANAF`, `Rol: USER/MODERATOR/ADMIN`), 4 carduri KPI (`Inventar Complet`, `Încasări ca Proprietar (90%)`, `Rulaj ca Chiriaș`, `Reputație & Facturi`), Fișa de Date a Contului (`profiles + profile_private`), lista tuturor anunțurilor, tabelele de rezervări ca Proprietar și ca Chiriaș, Facturile Fiscale și Istoricul Audit Admin.
+- **Conectare Rapidă din Panoul Admin & Profil (`components/admin/AdminDashboardClient.tsx`, `app/(dashboard)/profil/page.tsx`)** (`renta-frontend`):
+  - În tab-ul `Utilizatori` din `/admin`, numele utilizatorului este acum link direct către `/admin/utilizatori/[id]`, iar pe coloana de acțiuni a fost adăugat butonul `Inspectează 360°` (cu iconița `Eye`) + link secundar `Vitrină Publică` (`/profil/[id]`).
+  - În `/profil`, pentru conturile cu rol `admin`, a fost adăugat butonul rapid `Panou Admin` (cu iconița `ShieldCheck`) în bara de acțiuni din Hero Card.
+- **Verificare QA & Audit Securitate / GDPR (`renta-qa-tracker`)**:
+  - `npx.cmd tsc --noEmit`: 0 erori TypeScript (`exit code 0`).
+  - `npm.cmd run test -- --run`: 24 / 24 teste Vitest PASS (`exit code 0`).
+  - Audit GDPR & RLS: confirmat că `getAdminUserInspectionDataAction` blochează orice acces neautorizat înainte de interogarea DB și că pagina `/admin/utilizatori/[id]` este 100% Read-Only.
+
+---
+
+## [v1.2.2-modern-profile-redesign] — 2026-11-22
+### Adăugat & Rafinat (Redesign Pagină de Profil `/profil` & Vitrină Publică Utilizator `/profil/[id]`)
+- **Redesign Pagină de Profil (`/profil` — `app/(dashboard)/profil/page.tsx`, `components/profile/ProfileForm.tsx`)** (`renta-frontend`):
+  - Aliniat la estetica **Modern Storefront** a paginii principale (`max-w-[1400px]`, carduri `rounded-2xl bg-white border-slate-200/90 shadow-sm`, 100% limbaj natural fără jargon SQL/DB precum `#PRF-00`, `RLS: auth.uid() = id`, `PUBLIC.PROFILE_PRIVATE`).
+  - **Hero Card Modern**: avatar rotunjit `rounded-2xl`, insigne `Cont Personal` / `Cont Business`, `Telefon verificat`, `Business verificat ANAF`, `Super-Admin` și bară de acțiuni rapide (`Profil public`, `Inventarul meu`, `Rezervări`, `+ Listează obiect`, `Delogare`).
+  - **Bandă de Sumar cu 4 Carduri KPI**: `Obiecte în catalog` (active din total), `Nivel de încredere` (bară de progres 0–100%), `Reputație & Rating` și `Plăți & Facturi (Încasări 90% & Escrow)`.
+  - **Layout Structurat pe 2 Coloane (`7 / 5` pe desktop)**:
+    - *Stânga*: Formularul de profil cu selector vizual pe carduri pentru **`Personal`** vs **`Business`**, încărcare fotografie cu iconiță `Camera`, secțiune `Date de contact protejate` cu iconiță `Lock` și previzualizarea ultimelor 3 obiecte listate cu buton rapid `Editează`.
+    - *Dreapta*: Card `Plăți, Încasări & Facturi` cu checklist Escrow, `TrustVerificationCard` în mod `stack` și `GdprPrivacyPanel`.
+- **Vitrină Publică Utilizator (`/profil/[id]` — `app/profil/[id]/page.tsx`, `app/obiect/[id]/page.tsx`)** (`renta-frontend`):
+  - Pagină publică de profil (100% GDPR-safe, interoghează doar `public.profiles`, `public.listings` și `public.reviews`) care afișează bio-ul ofertantului, insignele `Personal` / `Business`, anul înregistrării, toate echipamentele disponibile în grilă și recenziile verificate.
+  - Conectată direct din pagina fiecărui anunț (`/obiect/[id]` -> *„Vezi profilul & toate anunțurile →”*) și din `/profil` (*„Profil public”*).
+
+---
+
 ## [v1.2.1-instant-endless-scroll-prefetch] — 2026-11-22
 ### Optimizat (Endless Scroll „0 ms” cu Single-Slot Lookahead Prefetch & Proiecție SQL Ușoară)
 - **Single-Slot Lookahead Buffer & `rootMargin: "1200px"` (`components/catalog/EndlessCatalogGrid.tsx`)**:

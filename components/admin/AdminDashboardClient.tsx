@@ -15,6 +15,7 @@ import {
   Clock,
   Download,
   ExternalLink,
+  Eye,
   FileText,
   LayoutDashboard,
   MapPin,
@@ -1747,6 +1748,19 @@ export function AdminDashboardClient({
 
                             <td className="py-3 px-3.5 whitespace-nowrap text-right">
                               <div className="inline-flex items-center gap-1.5">
+                                <Link
+                                  href={`/admin/utilizatori/${u.id}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-ochre-light hover:border-ochre/30 text-ink hover:text-ochre text-[11px] font-semibold transition-colors"
+                                  title="Vizualizează contul 360° în mod Read-Only"
+                                >
+                                  <Eye
+                                    className="w-3 h-3 shrink-0"
+                                    strokeWidth={1.8}
+                                    aria-hidden="true"
+                                  />
+                                  <span>Vezi Cont</span>
+                                </Link>
+
                                 {isBusiness && (
                                   <button
                                     type="button"
@@ -2712,8 +2726,30 @@ export function AdminDashboardClient({
                             <span className="text-ink-muted">
                               {log.target_type}:
                             </span>{" "}
-                            {log.target_id.slice(0, 12)}
-                            {log.target_id.length > 12 ? "…" : ""}
+                            {log.target_type === "profile" &&
+                            log.target_id.length >= 32 ? (
+                              <Link
+                                href={`/admin/utilizatori/${log.target_id}`}
+                                className="font-semibold text-ink hover:text-ochre hover:underline"
+                                title={`Vezi contul utilizatorului ${log.target_id}`}
+                              >
+                                {log.target_id.slice(0, 12)}…
+                              </Link>
+                            ) : log.target_type === "listing" &&
+                              log.target_id.length >= 32 ? (
+                              <Link
+                                href={`/obiect/${log.target_id}`}
+                                className="font-semibold text-ink hover:text-ochre hover:underline"
+                                title={`Vezi anunțul ${log.target_id}`}
+                              >
+                                {log.target_id.slice(0, 12)}…
+                              </Link>
+                            ) : (
+                              <>
+                                {log.target_id.slice(0, 12)}
+                                {log.target_id.length > 12 ? "…" : ""}
+                              </>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 font-mono text-[11px] text-ink-muted max-w-md break-all">
                             {log.details && Object.keys(log.details).length > 0

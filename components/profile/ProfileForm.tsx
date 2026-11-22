@@ -2,6 +2,17 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  Building2,
+  Camera,
+  CheckCircle2,
+  AlertCircle,
+  Lock,
+  MapPin,
+  Phone,
+  Save,
+  User,
+} from "lucide-react";
 import { updateProfileAction } from "@/app/actions/auth";
 import { RENTA_CITIES } from "@/lib/types/database";
 
@@ -69,7 +80,7 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
           type: "success",
           text:
             result?.message ||
-            "Fișa de profil și datele private au fost actualizate.",
+            "Datele profilului tău au fost salvate cu succes.",
         });
         setSelectedAvatarName(null);
         router.refresh();
@@ -88,21 +99,33 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
     <form onSubmit={handleSubmit} className="space-y-6">
       {statusMessage && (
         <div
-          className={`p-3.5 border text-xs font-mono ${
+          className={`p-4 rounded-xl border text-xs font-medium flex items-start gap-2.5 ${
             statusMessage.type === "success"
-              ? "border-emerald-800 bg-emerald-900/10 text-emerald-950"
-              : "border-red-800/50 bg-red-900/10 text-red-950"
+              ? "border-emerald-200 bg-emerald-50/90 text-emerald-900"
+              : "border-red-200 bg-red-50/90 text-red-900"
           }`}
         >
-          [{statusMessage.type === "success" ? "SALVAT OK" : "EROARE"}]:{" "}
-          {statusMessage.text}
+          {statusMessage.type === "success" ? (
+            <CheckCircle2
+              className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          ) : (
+            <AlertCircle
+              className="w-4 h-4 text-red-600 shrink-0 mt-0.5"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+          )}
+          <span>{statusMessage.text}</span>
         </div>
       )}
 
-      {/* Upload Fotografie de Profil / Logo Atelier (Bucket `avatars`) */}
-      <div className="p-4 border border-ink/20 bg-cream flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Fotografie de Profil / Siglă Business */}
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200/80 bg-slate-50/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 border border-ink bg-cream-light overflow-hidden flex items-center justify-center shrink-0 font-display text-xl font-bold text-ink">
+          <div className="w-16 h-16 rounded-2xl border border-slate-200 bg-white shadow-2xs overflow-hidden flex items-center justify-center shrink-0 font-display text-xl font-extrabold text-ochre">
             {profile.avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -117,23 +140,30 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
             )}
           </div>
           <div className="space-y-1">
-            <div className="font-mono text-xs uppercase font-bold text-ink">
-              Fotografie Membru / Siglă Firmă (Opțional)
+            <div className="text-sm font-bold text-ink font-display">
+              {accountType === "company"
+                ? "Siglă Business / Fotografie Profil"
+                : "Fotografie de Profil"}
             </div>
             <p className="text-xs text-ink-muted">
-              Format JPG, PNG sau WEBP (maxim 2 MB). Se salvează în bucket-ul{" "}
-              <code className="font-mono">avatars</code>.
+              Format JPG, PNG sau WEBP (maxim 2 MB). O imagine clară crește
+              încrederea la rezervare.
             </p>
             {selectedAvatarName && (
-              <div className="font-mono text-[11px] text-ochre font-bold">
-                Fișier selectat: {selectedAvatarName}
+              <div className="text-xs text-ochre font-semibold">
+                Fișier pregătit: {selectedAvatarName}
               </div>
             )}
           </div>
         </div>
 
-        <label className="catalog-btn-secondary cursor-pointer shrink-0">
-          Schimbă Fotografia
+        <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white hover:bg-slate-100 text-ink border border-slate-200/90 text-xs font-semibold shadow-2xs transition-all cursor-pointer shrink-0">
+          <Camera
+            className="w-4 h-4 text-ochre shrink-0"
+            strokeWidth={1.8}
+            aria-hidden="true"
+          />
+          <span>Schimbă fotografia</span>
           <input
             type="file"
             name="avatar"
@@ -146,47 +176,86 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
         </label>
       </div>
 
-      {/* Tipul Contului */}
+      {/* 2. Selector Vizual Tip Cont: Personal vs Business */}
       <div className="space-y-2">
-        <label className="block font-mono text-xs uppercase text-ink font-semibold">
-          Tip Cont în Catalog
+        <label className="block text-xs font-semibold text-ink">
+          Tipul contului în platformă
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             type="button"
             onClick={() => setAccountType("individual")}
-            className={`p-3 text-left border font-mono text-xs transition-colors ${
+            className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
               accountType === "individual"
-                ? "border-ink bg-ochre-light font-bold"
-                : "border-ink/25 bg-cream"
+                ? "border-ochre bg-ochre-light/50 ring-2 ring-ochre/15 shadow-2xs"
+                : "border-slate-200/90 bg-white hover:border-slate-300"
             }`}
           >
-            [P2P] Persoană Fizică (Individual)
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                accountType === "individual"
+                  ? "bg-ochre text-white"
+                  : "bg-slate-100 text-ink-muted"
+              }`}
+            >
+              <User className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-ink font-display">
+                Personal
+              </div>
+              <p className="text-[11px] text-ink-muted leading-snug mt-0.5">
+                Persoană fizică — închiriezi ocazional echipamente din
+                patrimoniul propriu.
+              </p>
+            </div>
           </button>
+
           <button
             type="button"
             onClick={() => setAccountType("company")}
-            className={`p-3 text-left border font-mono text-xs transition-colors ${
+            className={`p-4 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
               accountType === "company"
-                ? "border-ink bg-ochre-light font-bold"
-                : "border-ink/25 bg-cream"
+                ? "border-ochre bg-ochre-light/50 ring-2 ring-ochre/15 shadow-2xs"
+                : "border-slate-200/90 bg-white hover:border-slate-300"
             }`}
           >
-            [B2C] Firmă de Închirieri (Company)
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                accountType === "company"
+                  ? "bg-ochre text-white"
+                  : "bg-slate-100 text-ink-muted"
+              }`}
+            >
+              <Building2
+                className="w-4 h-4"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-ink font-display">
+                Business
+              </div>
+              <p className="text-[11px] text-ink-muted leading-snug mt-0.5">
+                Firmă / PFA — centru de închirieri cu verificare CUI ANAF și
+                facturare.
+              </p>
+            </div>
           </button>
         </div>
         <input type="hidden" name="account_type" value={accountType} />
       </div>
 
-      {/* Nume / Denumire & Oraș */}
+      {/* 3. Nume / Denumire & Oraș */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <label
             htmlFor="display_name"
-            className="block font-mono text-xs uppercase text-ink font-semibold"
+            className="block text-xs font-semibold text-ink"
           >
             {accountType === "company"
-              ? "Denumire Firmă / Atelier *"
+              ? "Denumire Business / Firmă *"
               : "Nume și Prenume *"}
           </label>
           <input
@@ -196,6 +265,11 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
             required
             minLength={2}
             defaultValue={profile.full_name}
+            placeholder={
+              accountType === "company"
+                ? "Ex: ProRent Utilaje SRL"
+                : "Ex: Andrei Popescu"
+            }
             className="catalog-input"
           />
         </div>
@@ -203,9 +277,16 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
         <div className="space-y-1.5">
           <label
             htmlFor="city"
-            className="block font-mono text-xs uppercase text-ink font-semibold"
+            className="block text-xs font-semibold text-ink"
           >
-            Oraș *
+            <span className="inline-flex items-center gap-1">
+              <MapPin
+                className="w-3.5 h-3.5 text-ochre shrink-0"
+                strokeWidth={1.8}
+                aria-hidden="true"
+              />
+              <span>Oraș principal *</span>
+            </span>
           </label>
           <select
             id="city"
@@ -222,13 +303,20 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
         </div>
       </div>
 
-      {/* Date Private Izolate GDPR (public.profile_private): Telefon + CUI */}
-      <div className="p-4 border border-ink/20 bg-cream space-y-4">
-        <div className="flex items-center justify-between border-b border-ink/15 pb-2 font-mono text-xs">
-          <span className="font-bold text-ink uppercase">
-            DATE DE CONTACT PROTEJATE GDPR (PUBLIC.PROFILE_PRIVATE)
-          </span>
-          <span className="text-[11px] text-ink-muted">
+      {/* 4. Date de Contact Protejate (Telefon + CUI Business) */}
+      <div className="p-4 sm:p-5 rounded-xl border border-slate-200/80 bg-slate-50/70 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+          <div className="flex items-center gap-2">
+            <Lock
+              className="w-4 h-4 text-ochre shrink-0"
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <span className="text-xs font-bold text-ink">
+              Date de contact protejate
+            </span>
+          </div>
+          <span className="text-[11px] text-ink-muted bg-white px-2.5 py-0.5 rounded-full border border-slate-200/80">
             Vizibile doar la rezervări confirmate
           </span>
         </div>
@@ -237,9 +325,16 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
           <div className="space-y-1.5">
             <label
               htmlFor="phone"
-              className="block font-mono text-xs uppercase text-ink font-semibold"
+              className="block text-xs font-semibold text-ink"
             >
-              Telefon Contact (România)
+              <span className="inline-flex items-center gap-1">
+                <Phone
+                  className="w-3.5 h-3.5 text-ink-muted shrink-0"
+                  strokeWidth={1.8}
+                  aria-hidden="true"
+                />
+                <span>Telefon de contact (România)</span>
+              </span>
             </label>
             <input
               id="phone"
@@ -255,7 +350,7 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
             <div className="space-y-1.5">
               <label
                 htmlFor="company_cui"
-                className="block font-mono text-xs uppercase text-ink font-semibold"
+                className="block text-xs font-semibold text-ink"
               >
                 CUI / CIF Firmă *
               </label>
@@ -273,35 +368,38 @@ export function ProfileForm({ profile }: { profile: ProfileData }) {
         </div>
       </div>
 
-      {/* Bio / Descriere Atelier */}
+      {/* 5. Bio / Descriere & Program Predare */}
       <div className="space-y-1.5">
-        <label
-          htmlFor="bio"
-          className="block font-mono text-xs uppercase text-ink font-semibold"
-        >
-          Descriere Scurtă / Program Ridicare (public.profiles.bio)
+        <label htmlFor="bio" className="block text-xs font-semibold text-ink">
+          Descriere scurtă &amp; detalii de predare
         </label>
         <textarea
           id="bio"
           name="bio"
           rows={3}
           defaultValue={profile.bio ?? ""}
-          placeholder="Ex: Predare personală în zona Piața Victoriei sau la sediul atelierului nostru Luni–Vineri 09:00–18:00..."
+          placeholder="Ex: Predare rapidă în zona Piața Victoriei sau la sediul nostru Luni–Vineri 09:00–18:00. Toate echipamentele sunt verificate înainte de predare."
           className="catalog-input"
         />
+        <p className="text-[11px] text-ink-muted">
+          Acest text apare pe pagina anunțurilor tale pentru a ajuta chiriașii
+          să știe cum și unde pot prelua echipamentele.
+        </p>
       </div>
 
-      <div className="pt-2">
+      <div className="pt-1 flex items-center justify-end">
         <button
           type="submit"
           disabled={loading}
-          className="catalog-btn-primary"
+          className="catalog-btn-primary inline-flex items-center gap-2"
         >
-          {loading
-            ? "Se salvează modificările..."
-            : "Salvează Fișa de Profil"}
+          <Save className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
+          <span>
+            {loading ? "Se salvează modificările..." : "Salvează modificările"}
+          </span>
         </button>
       </div>
     </form>
   );
 }
+export const ProfileEditForm = ProfileForm;

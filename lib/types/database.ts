@@ -592,3 +592,44 @@ export interface AdminDashboardData {
   reports: ListingReportRecord[];
   auditLogs: AdminAuditLog[];
 }
+
+/**
+ * DTO Read-Only pentru funcționalitatea Admin 360° Account Inspector (`/admin/users/[userId]`).
+ *
+ * Analogie C / Java:
+ * - În Java (Spring Boot), acesta este un DTO imutabil (`record AdminUserInspectionData(...)`)
+ *   returnat de un endpoint `@GetMapping("/admin/users/{id}")` protejat prin
+ *   `@PreAuthorize("hasRole('ADMIN')")`.
+ * - Oferă o imagine de ansamblu 360° (View-Only / Read-Only) asupra unui cont:
+ *   profil public + date private (telefon, CUI, rol), statistici financiare,
+ *   inventar complet de anunțuri, rezervări ca proprietar și chiriaș, facturi
+ *   și jurnalul de audit administrativ care vizează acest utilizator.
+ */
+export interface AdminUserInspectionData {
+  authorized: boolean;
+  adminUserId: string | null;
+  user:
+    | (Profile & {
+        role: UserRole;
+        phone: string | null;
+        company_cui: string | null;
+      })
+    | null;
+  stats: {
+    totalListings: number;
+    activeListings: number;
+    pausedListings: number;
+    archivedListings: number;
+    bookingsAsOwnerCount: number;
+    bookingsAsRenterCount: number;
+    completedBookingsCount: number;
+    totalEarnedAsOwnerRon: number;
+    totalSpentAsRenterRon: number;
+    invoicesCount: number;
+  };
+  listings: ListingWithDetails[];
+  bookingsAsOwner: AdminBookingRow[];
+  bookingsAsRenter: AdminBookingRow[];
+  invoices: InvoiceRecord[];
+  auditLogs: AdminAuditLog[];
+}

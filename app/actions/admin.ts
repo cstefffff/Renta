@@ -10,8 +10,11 @@ import type {
   AdminBreakdownItem,
   AdminDashboardData,
   AdminListingRow,
+  AdminUserInspectionData,
   AdminUserRow,
   BookingStatus,
+  CancellationPolicy,
+  CategorySlug,
   DepositStatus,
   DisputeReason,
   DisputeRecord,
@@ -19,9 +22,11 @@ import type {
   EFacturaStatus,
   InvoiceProvider,
   InvoiceRecord,
+  ListingImage,
   ListingReportRecord,
   ListingReportStatus,
   ListingStatus,
+  ListingWithDetails,
   PaymentStatus,
   Profile,
   UserRole,
@@ -1168,4 +1173,470 @@ export async function adminSendSystemNotificationAction(
     "Notificarea de sistem a fost trimisă utilizatorului și înregistrată în audit log.",
     null
   );
+}
+
+/**
+ * Construiește un DTO gol de tip `AdminUserInspectionData` (echivalent cu un
+ * `Optional.empty()` / Null-Object Pattern în Java) atunci când apelantul nu
+ * are rol de administrator sau când `targetUserId` nu este valid.
+ */
+function buildEmptyAdminUserInspectionData(
+  authorized: boolean,
+  adminUserId: string | null
+): AdminUserInspectionData {
+  return {
+    authorized,
+    adminUserId,
+    user: null,
+    stats: {
+      totalListings: 0,
+      activeListings: 0,
+      pausedListings: 0,
+      archivedListings: 0,
+      bookingsAsOwnerCount: 0,
+      bookingsAsRenterCount: 0,
+      completedBookingsCount: 0,
+      totalEarnedAsOwnerRon: 0,
+      totalSpentAsRenterRon: 0,
+      invoicesCount: 0,
+    },
+    listings: [],
+    bookingsAsOwner: [],
+    bookingsAsRenter: [],
+    invoices: [],
+    auditLogs: [],
+  };
+}
+
+/**
+ * 10. Admin 360° Account Inspector (View-Only / Read-Only User View):
+ *     Încarcă imaginea completă 360° a unui utilizator (profil public + date
+ *     private PII din `profile_private`, inventar complet de anunțuri,
+ *     rezervări ca proprietar și ca chiriaș, facturi și jurnal de audit).
+ *
+ * Analogie C / Java:
+ * - În Spring Boot, această funcție este un serviciu `@Transactional(readOnly = true)`
+ *   protejat cu `@PreAuthorize("hasRole('ADMIN')")` care agregă printr-un
+ *   `CompletableFuture.allOf(...)` (`Promise.all`) datele din 6 tabele într-un
+ *   singur DTO Read-Only (`AdminUserInspectionData`), fără a modifica starea
+ *   utilizatorului inspectat și fără a-i prelua sesiunea (fără impersonare).
+ */
+export async function getAdminUserInspectionDataAction(
+  targetUserId: string
+): Promise<AdminUserInspectionData> {
+  const ctx = await requireAdminContext();
+  if (!ctx.supabase || !ctx.isAdmin) {
+    return buildEmptyAdminUserInspectionData(false, ctx.userId);
+  }
+
+  const cleanTargetId = (targetUserId ?? "").trim();
+  if (!UUID_REGEX.test(cleanTargetId)) {
+    return buildEmptyAdminUserInspectionData(true, ctx.userId);
+  }
+
+  const supabase = ctx.supabase;
+
+  // Interogăm în paralel toate sursele de date folosind politicile RLS `*_select_admin`
+  // din Migrațiile 008 și 009 (echivalent cu `CompletableFuture.allOf` în Java)
+  const [
+    profileRes,
+    privateRes,
+    listingsRes,
+    bookingsRes,
+    invoicesRes,
+    auditLogsRes,
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select(
+        "id, display_name, account_type, city, bio, avatar_url, phone_verified, kyb_verified, rating_avg, rating_count, created_at, updated_at, company_name, company_address, kyb_verified_at"
+      )
+      .eq("id", cleanTargetId)
+      .maybeSingle(),
+    supabase
+      .from("profile_private")
+      .select("phone, company_cui, phone_verified, role")
+      .eq("id", cleanTargetId)
+      .maybeSingle(),
+    supabase
+      .from("listings")
+      .select(
+        "id, catalog_code, owner_id, title, description, category, price_per_day, price_per_hour, deposit_ron, min_rental_days, cancellation_policy, rating_avg, rating_count, city, status, created_at, updated_at, images:listing_images(*)"
+      )
+      .eq("owner_id", cleanTargetId)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("bookings")
+      .select(
+        "id, booking_code, listing_id, renter_id, owner_id, start_date, end_date, total_days, total_price_ron, platform_fee_ron, status, created_at, listings(id, catalog_code, title)"
+      )
+      .or(`owner_id.eq.${cleanTargetId},renter_id.eq.${cleanTargetId}`)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("invoices")
+      .select(
+        "id, invoice_number, booking_id, payment_id, owner_id, renter_id, issuer_name, issuer_cui, client_name, client_cui, client_address, subtotal_ron, vat_rate, vat_amount_ron, total_ron, currency, provider, external_invoice_id, efactura_status, issued_at, created_at"
+      )
+      .or(`owner_id.eq.${cleanTargetId},renter_id.eq.${cleanTargetId}`)
+      .order("issued_at", { ascending: false }),
+    supabase
+      .from("admin_audit_logs")
+      .select("id, admin_id, action, target_type, target_id, details, created_at")
+      .eq("target_id", cleanTargetId)
+      .order("created_at", { ascending: false })
+      .limit(25),
+  ]);
+
+  if (profileRes.error || !profileRes.data) {
+    return buildEmptyAdminUserInspectionData(true, ctx.userId);
+  }
+
+  const pRow = profileRes.data;
+  const privRow = !privateRes.error ? privateRes.data : null;
+
+  const rawRole = String(privRow?.role ?? "user") as UserRole;
+  const resolvedRole: UserRole = VALID_USER_ROLES.has(rawRole)
+    ? rawRole
+    : "user";
+  const resolvedPhone = privRow?.phone ? String(privRow.phone) : null;
+  const resolvedCompanyCui = privRow?.company_cui
+    ? String(privRow.company_cui)
+    : null;
+  const resolvedPhoneVerified =
+    Boolean(pRow.phone_verified) || Boolean(privRow?.phone_verified);
+
+  const inspectedUser: Profile & {
+    role: UserRole;
+    phone: string | null;
+    company_cui: string | null;
+  } = {
+    id: String(pRow.id),
+    display_name: String(pRow.display_name ?? ""),
+    account_type: String(pRow.account_type ?? "individual") as AccountType,
+    city: String(pRow.city ?? ""),
+    bio: pRow.bio ? String(pRow.bio) : null,
+    avatar_url: pRow.avatar_url ? String(pRow.avatar_url) : null,
+    phone_verified: resolvedPhoneVerified,
+    kyb_verified: Boolean(pRow.kyb_verified),
+    rating_avg:
+      pRow.rating_avg !== null && pRow.rating_avg !== undefined
+        ? Number(pRow.rating_avg)
+        : null,
+    rating_count: Number(pRow.rating_count ?? 0) || 0,
+    created_at: String(pRow.created_at),
+    updated_at: String(pRow.updated_at),
+    company_name: pRow.company_name ? String(pRow.company_name) : null,
+    company_address: pRow.company_address ? String(pRow.company_address) : null,
+    kyb_verified_at: pRow.kyb_verified_at ? String(pRow.kyb_verified_at) : null,
+    role: resolvedRole,
+    phone: resolvedPhone,
+    company_cui: resolvedCompanyCui,
+  };
+
+  // Normalizare anunțuri (`ListingWithDetails[]`)
+  const ownerSummary: ListingWithDetails["owner"] = {
+    id: inspectedUser.id,
+    display_name: inspectedUser.display_name,
+    account_type: inspectedUser.account_type,
+    city: inspectedUser.city,
+    bio: inspectedUser.bio,
+    avatar_url: inspectedUser.avatar_url,
+    phone_verified: inspectedUser.phone_verified,
+    kyb_verified: inspectedUser.kyb_verified,
+    rating_avg: inspectedUser.rating_avg,
+    rating_count: inspectedUser.rating_count,
+    company_cui: inspectedUser.company_cui,
+    phone: inspectedUser.phone,
+  };
+
+  const listings: ListingWithDetails[] =
+    !listingsRes.error && Array.isArray(listingsRes.data)
+      ? listingsRes.data.map((row) => {
+          const rawImages = Array.isArray(row.images) ? row.images : [];
+          const sortedImages: ListingImage[] = rawImages
+            .map((img: Record<string, unknown>) => ({
+              id: String(img.id ?? ""),
+              listing_id: String(img.listing_id ?? row.id),
+              storage_path: String(img.storage_path ?? ""),
+              url: String(img.url ?? ""),
+              display_order: Number(img.display_order ?? 0) || 0,
+              created_at: String(img.created_at ?? row.created_at),
+            }))
+            .sort((a, b) => a.display_order - b.display_order);
+
+          const ratingAvg =
+            row.rating_avg !== null && row.rating_avg !== undefined
+              ? Number(row.rating_avg)
+              : null;
+          const ratingCount = Number(row.rating_count ?? 0) || 0;
+
+          return {
+            id: String(row.id),
+            catalog_code: String(row.catalog_code ?? ""),
+            owner_id: String(row.owner_id),
+            title: String(row.title ?? ""),
+            description: String(row.description ?? ""),
+            category: String(row.category ?? "altele") as CategorySlug,
+            price_per_day: Number(row.price_per_day ?? 0) || 0,
+            price_per_hour:
+              row.price_per_hour !== null && row.price_per_hour !== undefined
+                ? Number(row.price_per_hour)
+                : null,
+            deposit_ron: Number(row.deposit_ron ?? 0) || 0,
+            min_rental_days: Number(row.min_rental_days ?? 1) || 1,
+            cancellation_policy: String(
+              row.cancellation_policy ?? "flexible"
+            ) as CancellationPolicy,
+            rating_avg: ratingAvg,
+            rating_count: ratingCount,
+            city: String(row.city ?? ""),
+            status: String(row.status ?? "available") as ListingStatus,
+            created_at: String(row.created_at),
+            updated_at: String(row.updated_at),
+            owner: ownerSummary,
+            images: sortedImages,
+            average_rating: ratingAvg,
+            reviews_count: ratingCount,
+          };
+        })
+      : [];
+
+  const listingTitleById = new Map<
+    string,
+    { title: string; catalog_code: string }
+  >();
+  for (const item of listings) {
+    listingTitleById.set(item.id, {
+      title: item.title,
+      catalog_code: item.catalog_code,
+    });
+  }
+
+  // Colectăm ID-urile rezervărilor și ale partenerilor pentru a aduce plățile și numele partenerilor în paralel
+  const rawBookings =
+    !bookingsRes.error && Array.isArray(bookingsRes.data)
+      ? bookingsRes.data
+      : [];
+
+  const bookingIds: string[] = [];
+  const partnerUserIds = new Set<string>();
+
+  for (const bRow of rawBookings) {
+    bookingIds.push(String(bRow.id));
+    const rId = String(bRow.renter_id ?? "");
+    const oId = String(bRow.owner_id ?? "");
+    if (rId && rId !== cleanTargetId) partnerUserIds.add(rId);
+    if (oId && oId !== cleanTargetId) partnerUserIds.add(oId);
+  }
+
+  const [paymentsForBookingsRes, partnerProfilesRes] = await Promise.all([
+    bookingIds.length > 0
+      ? supabase
+          .from("payments")
+          .select("booking_id, payment_status, deposit_status")
+          .in("booking_id", bookingIds)
+      : Promise.resolve({ data: [], error: null }),
+    partnerUserIds.size > 0
+      ? supabase
+          .from("profiles")
+          .select("id, display_name")
+          .in("id", Array.from(partnerUserIds))
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+  const paymentByBookingId = new Map<
+    string,
+    { payment_status: PaymentStatus; deposit_status: DepositStatus }
+  >();
+  if (
+    !paymentsForBookingsRes.error &&
+    Array.isArray(paymentsForBookingsRes.data)
+  ) {
+    for (const payRow of paymentsForBookingsRes.data) {
+      const bId = String(payRow.booking_id ?? "");
+      if (bId) {
+        paymentByBookingId.set(bId, {
+          payment_status: String(
+            payRow.payment_status ?? "unpaid"
+          ) as PaymentStatus,
+          deposit_status: String(
+            payRow.deposit_status ?? "none"
+          ) as DepositStatus,
+        });
+      }
+    }
+  }
+
+  const displayNameById = new Map<string, string>();
+  displayNameById.set(inspectedUser.id, inspectedUser.display_name);
+  if (
+    !partnerProfilesRes.error &&
+    Array.isArray(partnerProfilesRes.data)
+  ) {
+    for (const partRow of partnerProfilesRes.data) {
+      displayNameById.set(
+        String(partRow.id),
+        String(partRow.display_name ?? "Utilizator RentA")
+      );
+    }
+  }
+
+  const bookingsAsOwner: AdminBookingRow[] = [];
+  const bookingsAsRenter: AdminBookingRow[] = [];
+
+  for (const row of rawBookings) {
+    const id = String(row.id);
+    const listingId = String(row.listing_id);
+    const renterId = String(row.renter_id);
+    const ownerId = String(row.owner_id);
+
+    const listingJoin = Array.isArray(row.listings)
+      ? row.listings[0]
+      : row.listings;
+    const fallbackListing = listingTitleById.get(listingId);
+
+    const listingTitle = listingJoin?.title
+      ? String(listingJoin.title)
+      : fallbackListing?.title || "Obiect șters / indisponibil";
+    const listingCode = listingJoin?.catalog_code
+      ? String(listingJoin.catalog_code)
+      : fallbackListing?.catalog_code || "—";
+
+    const payment = paymentByBookingId.get(id);
+
+    const normalizedBooking: AdminBookingRow = {
+      id,
+      booking_code: String(row.booking_code ?? ""),
+      listing_id: listingId,
+      listing_title: listingTitle,
+      listing_code: listingCode,
+      renter_name: displayNameById.get(renterId) || "Chiriaș necunoscut",
+      owner_name: displayNameById.get(ownerId) || "Proprietar necunoscut",
+      start_date: String(row.start_date),
+      end_date: String(row.end_date),
+      total_days: Number(row.total_days ?? 1) || 1,
+      total_price_ron: Number(row.total_price_ron ?? 0) || 0,
+      platform_fee_ron: Number(row.platform_fee_ron ?? 0) || 0,
+      status: String(row.status ?? "pending") as BookingStatus,
+      payment_status: payment?.payment_status ?? null,
+      deposit_status: payment?.deposit_status ?? null,
+      created_at: String(row.created_at),
+    };
+
+    if (ownerId === cleanTargetId) {
+      bookingsAsOwner.push(normalizedBooking);
+    }
+    if (renterId === cleanTargetId) {
+      bookingsAsRenter.push(normalizedBooking);
+    }
+  }
+
+  // Normalizare facturi
+  const invoices: InvoiceRecord[] =
+    !invoicesRes.error && Array.isArray(invoicesRes.data)
+      ? invoicesRes.data.map((row) => ({
+          id: String(row.id),
+          invoice_number: String(row.invoice_number ?? ""),
+          booking_id: String(row.booking_id),
+          payment_id: row.payment_id ? String(row.payment_id) : null,
+          owner_id: String(row.owner_id),
+          renter_id: String(row.renter_id),
+          issuer_name: String(row.issuer_name ?? ""),
+          issuer_cui: String(row.issuer_cui ?? ""),
+          client_name: String(row.client_name ?? ""),
+          client_cui: row.client_cui ? String(row.client_cui) : null,
+          client_address: row.client_address
+            ? String(row.client_address)
+            : null,
+          subtotal_ron: Number(row.subtotal_ron ?? 0) || 0,
+          vat_rate: Number(row.vat_rate ?? 19) || 0,
+          vat_amount_ron: Number(row.vat_amount_ron ?? 0) || 0,
+          total_ron: Number(row.total_ron ?? 0) || 0,
+          currency: String(row.currency ?? "RON"),
+          provider: String(row.provider ?? "internal") as InvoiceProvider,
+          external_invoice_id: row.external_invoice_id
+            ? String(row.external_invoice_id)
+            : null,
+          efactura_status: String(
+            row.efactura_status ?? "pending_anaf"
+          ) as EFacturaStatus,
+          issued_at: String(row.issued_at),
+          created_at: String(row.created_at),
+        }))
+      : [];
+
+  // Normalizare jurnal de audit pentru acest utilizator (ultimele 25 intrări)
+  const auditLogs: AdminAuditLog[] =
+    !auditLogsRes.error && Array.isArray(auditLogsRes.data)
+      ? auditLogsRes.data.map((row) => ({
+          id: String(row.id),
+          admin_id: String(row.admin_id),
+          action: String(row.action ?? ""),
+          target_type: String(row.target_type ?? ""),
+          target_id: String(row.target_id ?? ""),
+          details:
+            row.details &&
+            typeof row.details === "object" &&
+            !Array.isArray(row.details)
+              ? (row.details as Record<string, unknown>)
+              : {},
+          created_at: String(row.created_at),
+        }))
+      : [];
+
+  // Calcul statistici 360° ale contului
+  const totalListings = listings.length;
+  const activeListings = listings.filter(
+    (l) => l.status === "available"
+  ).length;
+  const pausedListings = listings.filter(
+    (l) => l.status === "unavailable"
+  ).length;
+  const archivedListings = listings.filter(
+    (l) => l.status === "archived"
+  ).length;
+
+  const bookingsAsOwnerCount = bookingsAsOwner.length;
+  const bookingsAsRenterCount = bookingsAsRenter.length;
+
+  const completedBookingsCount =
+    bookingsAsOwner.filter((b) => b.status === "completed").length +
+    bookingsAsRenter.filter((b) => b.status === "completed").length;
+
+  // Câștigul net ca proprietar = 90% din valoarea rezervărilor confirmate/finalizate
+  const totalEarnedAsOwnerRon = roundRon(
+    bookingsAsOwner
+      .filter((b) => b.status === "confirmed" || b.status === "completed")
+      .reduce((sum, b) => sum + b.total_price_ron * 0.9, 0)
+  );
+
+  // Cheltuiala totală ca chiriaș = 100% din valoarea rezervărilor confirmate/finalizate
+  const totalSpentAsRenterRon = roundRon(
+    bookingsAsRenter
+      .filter((b) => b.status === "confirmed" || b.status === "completed")
+      .reduce((sum, b) => sum + b.total_price_ron, 0)
+  );
+
+  return {
+    authorized: true,
+    adminUserId: ctx.userId,
+    user: inspectedUser,
+    stats: {
+      totalListings,
+      activeListings,
+      pausedListings,
+      archivedListings,
+      bookingsAsOwnerCount,
+      bookingsAsRenterCount,
+      completedBookingsCount,
+      totalEarnedAsOwnerRon,
+      totalSpentAsRenterRon,
+      invoicesCount: invoices.length,
+    },
+    listings,
+    bookingsAsOwner,
+    bookingsAsRenter,
+    invoices,
+    auditLogs,
+  };
 }

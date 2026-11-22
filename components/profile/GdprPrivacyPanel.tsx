@@ -117,16 +117,16 @@ export function GdprPrivacyPanel() {
       <div className="border-b border-slate-100 pb-4 flex flex-wrap items-center justify-between gap-2">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-ochre-light px-2.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider text-ochre">
-              GDPR // ART. 17 &amp; ART. 20
+            <span className="inline-flex items-center rounded-full bg-ochre-light px-2.5 py-0.5 text-[11px] font-semibold text-ochre">
+              Confidențialitate &amp; Date Personale
             </span>
           </div>
           <h2 className="font-display text-lg font-bold text-ink">
-            Confidențialitate &amp; Controlul Datelor Tale (GDPR)
+            Controlul Datelor Tale (GDPR)
           </h2>
           <p className="text-xs text-ink-muted">
-            Îți poți descărca oricând datele într-un format portabil JSON sau
-            poți solicita anonimizarea definitivă a contului.{" "}
+            Îți poți descărca oricând o copie completă a datelor sau poți
+            solicita închiderea și anonimizarea contului.{" "}
             <Link
               href="/confidentialitate"
               className="text-ochre font-semibold hover:underline"

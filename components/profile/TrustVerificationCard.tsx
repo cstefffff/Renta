@@ -32,6 +32,7 @@ export interface TrustVerificationCardProps {
   kybVerified: boolean;
   companyName?: string | null;
   companyAddress?: string | null;
+  layout?: "grid" | "stack";
 }
 
 export function TrustVerificationCard({
@@ -42,6 +43,7 @@ export function TrustVerificationCard({
   kybVerified,
   companyName,
   companyAddress,
+  layout = "grid",
 }: TrustVerificationCardProps) {
   const router = useRouter();
 
@@ -178,24 +180,30 @@ export function TrustVerificationCard({
 
   return (
     <section className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-sm space-y-5">
-      {/* Antet Secțiune Trust & Safety */}
+      {/* Antet Secțiune Verificare Identitate */}
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
-          <span className="font-mono text-[11px] uppercase tracking-wider text-ochre font-bold">
-            TRUST &amp; SAFETY // VERIFICARE IDENTITATE
+          <span className="inline-flex items-center rounded-full bg-ochre-light px-2.5 py-0.5 text-[11px] font-semibold text-ochre">
+            Încredere &amp; Siguranță
           </span>
-          <h2 className="font-display text-lg sm:text-xl font-bold text-ink mt-0.5">
-            Verificare Telefon (OTP) &amp; Firmă ANAF (KYB)
+          <h2 className="font-display text-lg font-bold text-ink mt-1">
+            Verificare Telefon &amp; Business (ANAF)
           </h2>
         </div>
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-ink-muted">
           <ShieldCheck className="w-3.5 h-3.5 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
-          <span>Crește încrederea în catalog</span>
+          <span>Insignă verificată în catalog</span>
         </span>
       </div>
 
-      {/* Grid 2 coloane pe desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Grid sau Stack adaptiv */}
+      <div
+        className={
+          layout === "stack"
+            ? "grid grid-cols-1 gap-4"
+            : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+        }
+      >
         {/* COLOANA STÂNGA — M12.1 Verificare Telefon (OTP SMS) */}
         <div className="rounded-xl border border-slate-200/80 bg-slate-50/60 p-5 flex flex-col justify-between gap-4">
           <div className="space-y-4">
@@ -333,23 +341,23 @@ export function TrustVerificationCard({
               <div>
                 <h3 className="flex items-center gap-2 font-display text-base font-bold text-ink">
                   <Building2 className="w-4 h-4 text-ochre shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                  <span>Verificare Firmă ANAF (CUI)</span>
+                  <span>Verificare Business ANAF (CUI)</span>
                 </h3>
                 <p className="text-xs text-ink-muted mt-0.5">
-                  Validare automată KYB pentru firmele de închirieri (Segment B2C)
-                  direct în Registrul ANAF.
+                  Validare automată pentru conturile Business direct în
+                  Registrul ANAF.
                 </p>
               </div>
 
               {isKybVerified ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
                   <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                  <span>Firmă Verificată ANAF (KYB)</span>
+                  <span>Business Verificat</span>
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
                   <Circle className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-                  <span>Neverificată</span>
+                  <span>Neverificat</span>
                 </span>
               )}
             </div>
@@ -405,13 +413,13 @@ export function TrustVerificationCard({
             ) : (
               <div className="rounded-xl border border-slate-200 bg-white p-3.5 text-xs text-ink-muted space-y-1.5">
                 <div className="font-semibold text-ink">
-                  Cont activ: Persoană Fizică (Segment A — P2P)
+                  Cont activ: Personal
                 </div>
                 <p>
                   Verificarea automată ANAF (CUI) este dedicată conturilor de tip{" "}
-                  <strong>Firmă de Închirieri (B2C)</strong>. Dacă reprezinți o
-                  societate comercială, poți schimba tipul contului din
-                  formularul de profil de mai jos.
+                  <strong>Business</strong>. Dacă reprezinți o firmă sau un PFA,
+                  poți comuta tipul contului pe Business din formularul de
+                  profil.
                 </p>
               </div>
             )}
@@ -430,10 +438,10 @@ export function TrustVerificationCard({
           </div>
 
           <p className="text-[11px] text-ink-muted">
-            Firmele verificate ANAF primesc automat insigna{" "}
+            Conturile verificate ANAF primesc automat insigna{" "}
             <strong className="inline-flex items-center gap-1 text-emerald-700 align-bottom">
               <Building2 className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
-              <span>Firmă Verificată</span>
+              <span>Business verificat</span>
               <Check className="w-3 h-3 shrink-0" strokeWidth={1.8} aria-hidden="true" />
             </strong>{" "}
             pe toate cardurile din catalogul public.
