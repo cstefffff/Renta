@@ -4,6 +4,26 @@ Toate modificările notabile, deciziile arhitecturale și validările QA ale pla
 
 ---
 
+## [v1.3.1-hero-category-dropdown-with-icons] — 2026-11-22
+### Adăugat & Rafinat (Dropdown-uri Custom Categorii cu Iconițe & Orașe Fără Scrollbar în Hero + Simplificare Homepage)
+- **Componentă Custom `HeroCategorySelect` (`components/catalog/HeroCategorySelect.tsx`)** (`renta-frontend`):
+  - Creat un Client Component custom care înlocuiește `<select name="category">` nativ din bara de căutare a Hero-ului cu un dropdown interactiv dotat cu iconițe vectoriale `lucide-react` (`LayoutGrid` pentru *Toate categoriile*, `Wrench`, `Camera`, `Tent`, `PartyPopper`, `Gamepad2`, `Shirt`, `Bike`, `Package` pentru cele 8 categorii din `LISTING_CATEGORIES`, **0 emoji-uri**).
+  - Meniul flotant este stilizat cu `rounded-2xl shadow-xl ring-1 ring-slate-900/5 p-1.5 overflow-hidden` (fără scrollbar vertical, afișând toate opțiunile cu colțuri perfect rotunjite și separator subtil după *Toate categoriile*).
+  - Păstrează compatibilitatea 100% cu formularul HTML GET nativ (`<form action="/catalog" method="GET">`) prin `<input type="hidden" name="category" value={selectedSlug} />`.
+  - Include atribute complete de accesibilitate ARIA (`aria-haspopup="listbox"`, `aria-expanded={isOpen}`, `role="listbox"`, `role="option"`, `aria-selected={isSelected}`) și închidere automată la tasta `Escape` sau click în afara componentei (`mousedown` / `keydown` în `useEffect`).
+- **Componentă Custom `HeroCitySelect` (`components/catalog/HeroCitySelect.tsx`)** (`renta-frontend`):
+  - Creat un Client Component custom în același stil vizual unificat (`rounded-2xl shadow-xl ring-1 ring-slate-900/5 p-1.5 overflow-hidden` fără scrollbar și fără iconițe în dreptul opțiunilor) care înlocuiește `<select name="city">` nativ pentru cele 8 orașe din `RENTA_CITIES` + opțiunea *Toate orașele*.
+  - Include `<input type="hidden" name="city" value={selectedCity} />`, atributele ARIA (`aria-label="Oraș"`, `aria-haspopup="listbox"`, `aria-expanded={isOpen}`, `role="listbox"`, `role="option"`, `aria-selected={isSelected}`) și închidere automată la `Escape` / click-outside.
+- **Decongestionare & Simplificare Homepage (`app/page.tsx`)** (`renta-frontend`):
+  - Eliminată bara orizontală glisabilă redundantă `<nav aria-label="Categorii de echipamente">` cu pastilele de categorii de sub secțiunea „Cum funcționează RentA în 3 pași simpli”, concentrând selecția categoriei și a orașului direct în bara de căutare din Hero prin `<HeroCategorySelect />` și `<HeroCitySelect />`.
+  - Izolat accentul decorativ (`overflow-hidden rounded-2xl`) din Hero într-un container dedicat `pointer-events-none`, astfel încât meniurile flotante `HeroCategorySelect` și `HeroCitySelect` să se poată deschide liber peste marginea secțiunii fără a fi tăiate (`clip`).
+- **Verificare QA & Accesibilitate (`renta-qa-tracker`)**:
+  - `npx.cmd tsc --noEmit`: 0 erori TypeScript (`exit code 0`).
+  - `npm.cmd run test`: 24 / 24 teste Vitest PASS (`exit code 0`).
+  - Audit UI & A11y: confirmată eliminarea barei `<nav aria-label="Categorii de echipamente">`, prezența `<input type="hidden" name="category" />` și `<input type="hidden" name="city" />`, containerul `rounded-2xl overflow-hidden` fără scrollbar pe ambele dropdown-uri, atributele ARIA și utilizarea exclusivă a iconițelor `lucide-react` (0 emoji-uri).
+
+---
+
 ## [v1.3.0-admin-360-user-inspector] — 2026-11-22
 ### Adăugat (Admin 360° Account Inspector — View-Only / Read-Only User View `/admin/utilizatori/[id]`)
 - **Contract TypeScript & Server Action 360° (`lib/types/database.ts`, `app/actions/admin.ts`)** (`renta-backend`):

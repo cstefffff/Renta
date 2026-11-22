@@ -1,42 +1,13 @@
 import Link from "next/link";
-import {
-  Bike,
-  Building2,
-  Camera,
-  Gamepad2,
-  LayoutGrid,
-  Package,
-  PartyPopper,
-  Search,
-  Shirt,
-  Tent,
-  User,
-  Wrench,
-  type LucideIcon,
-} from "lucide-react";
+import { Building2, Search, User } from "lucide-react";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { getPaginatedPublicListingsAction } from "@/app/actions/listings";
-import { LISTING_CATEGORIES } from "@/lib/constants/categories";
 import { EndlessCatalogGrid } from "@/components/catalog/EndlessCatalogGrid";
-import type { CategorySlug, ListingWithDetails } from "@/lib/types/database";
+import { HeroCategorySelect } from "@/components/catalog/HeroCategorySelect";
+import { HeroCitySelect } from "@/components/catalog/HeroCitySelect";
+import type { ListingWithDetails } from "@/lib/types/database";
 
 export const dynamic = "force-dynamic";
-
-/**
- * Mapare iconițe vectoriale (`lucide-react`) pentru categoriile de pe Homepage.
- * Analogie C/Java: un `Map<CategorySlug, LucideIcon>` (HashMap imutabil) care
- * asociază fiecărui slug de categorie o componentă SVG curată și uniformă.
- */
-const CATEGORY_ICONS: Partial<Record<CategorySlug, LucideIcon>> = {
-  "scule-unelte": Wrench,
-  "foto-video": Camera,
-  "camping-outdoor": Tent,
-  "evenimente-party": PartyPopper,
-  electronice: Gamepad2,
-  vestimentar: Shirt,
-  "sport-timp-liber": Bike,
-  altele: Package,
-};
 
 /**
  * Pașii secțiunii „Cum funcționează RentA în 3 pași simpli”.
@@ -135,12 +106,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       )}
 
       {/* 1. Hero Banner Compact & Limbaj 100% Natural */}
-      <section className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm relative overflow-hidden">
-        {/* Accent decorativ subtil verde-smarald în colțul dreapta-sus */}
+      <section className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-7 space-y-5 shadow-sm relative">
+        {/* Accent decorativ subtil verde-smarald în colțul dreapta-sus (încapsulat în propriul overflow-hidden ca să nu taie dropdown-ul de categorii) */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute -top-24 -right-24 w-72 h-72 rounded-full bg-ochre-light/60 blur-3xl"
-        />
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl"
+        >
+          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-ochre-light/60 blur-3xl" />
+        </div>
 
         <div className="relative">
           <span className="bg-ochre-light text-ochre font-semibold text-xs px-3 py-1 rounded-full inline-flex items-center gap-2">
@@ -178,34 +151,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             />
           </div>
           <div className="sm:col-span-3">
-            <select
-              name="category"
-              aria-label="Categorie"
-              defaultValue=""
-              className="w-full bg-white border border-slate-200/90 rounded-xl px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
-            >
-              <option value="">Toate categoriile</option>
-              {LISTING_CATEGORIES.map((cat) => (
-                <option key={cat.slug} value={cat.slug}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+            <HeroCategorySelect />
           </div>
           <div className="sm:col-span-2">
-            <select
-              name="city"
-              aria-label="Oraș"
-              defaultValue=""
-              className="w-full bg-white border border-slate-200/90 rounded-xl px-3 py-2.5 text-sm text-ink focus:outline-none focus:border-ochre focus:ring-2 focus:ring-ochre/15 transition-all"
-            >
-              <option value="">Toate orașele</option>
-              <option value="București">București</option>
-              <option value="Cluj-Napoca">Cluj-Napoca</option>
-              <option value="Brașov">Brașov</option>
-              <option value="Timișoara">Timișoara</option>
-              <option value="Iași">Iași</option>
-            </select>
+            <HeroCitySelect />
           </div>
           <div className="sm:col-span-2">
             <button
@@ -223,42 +172,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </form>
       </section>
 
-      {/* 2. Bară Orizontală de Categorii pe un singur rând */}
-      <nav
-        aria-label="Categorii de echipamente"
-        className="flex items-center gap-2 overflow-x-auto pb-1"
-      >
-        <Link
-          href="/catalog"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-ochre-light text-ochre hover:bg-ochre hover:text-white whitespace-nowrap transition-all shrink-0"
-        >
-          <LayoutGrid
-            className="w-3.5 h-3.5 shrink-0"
-            strokeWidth={1.8}
-            aria-hidden="true"
-          />
-          <span>Toate categoriile</span>
-        </Link>
-        {LISTING_CATEGORIES.map((cat) => {
-          const CategoryIcon = CATEGORY_ICONS[cat.slug] ?? Package;
-          return (
-            <Link
-              key={cat.slug}
-              href={`/catalog?category=${cat.slug}`}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-medium bg-white text-ink border border-slate-200/90 hover:border-ochre/40 hover:bg-ochre-light hover:text-ochre whitespace-nowrap transition-all shrink-0 shadow-2xs"
-            >
-              <CategoryIcon
-                className="w-3.5 h-3.5 shrink-0"
-                strokeWidth={1.8}
-                aria-hidden="true"
-              />
-              <span>{cat.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* 3. Secțiune super compactă „Cum funcționează RentA în 3 pași simpli” — deasupra feed-ului endless */}
+      {/* 2. Secțiune super compactă „Cum funcționează RentA în 3 pași simpli” — deasupra feed-ului endless */}
       <section className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
